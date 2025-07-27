@@ -2,6 +2,7 @@ package main
 
 import (
 	"linkding-video-downloader/linkding"
+	"linkding-video-downloader/logging"
 	"linkding-video-downloader/ytdlp"
 	"log/slog"
 	"os"
@@ -18,6 +19,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	logger := logging.NewLogger()
+	slog.SetDefault(logger)
 
 	client, err := linkding.NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
 
