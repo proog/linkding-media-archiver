@@ -1,4 +1,7 @@
-FROM golang:alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /usr/src/app
 
@@ -7,13 +10,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -v -o /ldvd ./
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -v -o /app ./
 
 
 FROM alpine:latest
 
 RUN apk add --no-cache yt-dlp
 
-COPY --from=builder /ldvd /
+COPY --from=builder /app /
 
-ENTRYPOINT ["/ldvd"]
+ENTRYPOINT ["/app"]
