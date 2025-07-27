@@ -4,6 +4,7 @@ import (
 	"linkding-video-downloader/linkding"
 	"linkding-video-downloader/logging"
 	"linkding-video-downloader/ytdlp"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -22,12 +23,12 @@ func main() {
 
 	client, err := linkding.NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	tempdir, err := os.MkdirTemp(os.TempDir(), "videos")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	onExit(func() { os.RemoveAll(tempdir) })

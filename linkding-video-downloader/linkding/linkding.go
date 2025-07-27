@@ -18,6 +18,10 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 		return nil, err
 	}
 
+	if !parsedUrl.IsAbs() {
+		return nil, fmt.Errorf("base URL is not absolute: %s", baseUrl)
+	}
+
 	return &Client{BaseUrl: parsedUrl, Token: token}, nil
 }
 
