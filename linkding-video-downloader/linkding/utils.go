@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func deserialize[T any](resp *http.Response) (*T, error) {
@@ -67,7 +65,7 @@ func createMultipartBody(buffer *bytes.Buffer, file *os.File) (*multipart.Writer
 	defer formData.Close()
 
 	fileName := filepath.Base(file.Name())
-	mimeType, err := getMimeType(fileName)
+	mimeType, err := GetMimeType(fileName)
 
 	if err != nil {
 		return nil, err
@@ -90,14 +88,4 @@ func createMultipartBody(buffer *bytes.Buffer, file *os.File) (*multipart.Writer
 	}
 
 	return formData, nil
-}
-
-func getMimeType(fileName string) (string, error) {
-	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
-
-	if !strings.HasPrefix(mimeType, "video/") {
-		return "", fmt.Errorf("%s is not a video MIME type for %s", mimeType, fileName)
-	}
-
-	return mimeType, nil
 }

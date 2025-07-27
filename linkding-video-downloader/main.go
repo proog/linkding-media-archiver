@@ -8,7 +8,6 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -90,7 +89,7 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 	}
 
 	videoAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
-		return asset.AssetType == "upload" && strings.HasPrefix(asset.ContentType, "video/")
+		return asset.AssetType == "upload" && linkding.IsKnownMimeType(asset.ContentType)
 	})
 
 	if videoAssetIndex > -1 {
