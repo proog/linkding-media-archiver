@@ -16,10 +16,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		panic(err)
-	}
+	godotenv.Load()
 
 	logger := logging.NewLogger()
 	slog.SetDefault(logger)

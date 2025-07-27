@@ -28,7 +28,6 @@ func (client *Client) GetBookmarks(tag string) ([]Bookmark, error) {
 	endpointUrl := client.url("bookmarks/")
 	query := endpointUrl.Query()
 	query.Set("q", "#"+tag)
-	query.Set("limit", "10")
 	endpointUrl.RawQuery = query.Encode()
 
 	results, err := getAllItems[Bookmark](endpointUrl, func(url *url.URL) (*http.Response, error) {
