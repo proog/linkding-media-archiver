@@ -13,9 +13,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const maxConcurrency = 4
+
 func main() {
 	err := godotenv.Load()
-
 	if err != nil {
 		panic(err)
 	}
@@ -24,19 +25,11 @@ func main() {
 	slog.SetDefault(logger)
 
 	client, err := linkding.NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
-
-	if err != nil {
-		panic(err)
-	}
-
-	bookmarks, err := client.GetBookmarks(os.Getenv("LD_TAG"))
-
 	if err != nil {
 		panic(err)
 	}
 
 	tempdir, err := os.MkdirTemp(os.TempDir(), "videos")
-
 	if err != nil {
 		panic(err)
 	}
@@ -44,35 +37,53 @@ func main() {
 	defer os.RemoveAll(tempdir)
 	ytdlp := ytdlp.NewYtdlp(tempdir)
 
-	concurrency := 3
-	sem := make(chan int, concurrency)
+	tag := os.Getenv("LD_TAG")
+	if tag == "" {
+		tag = "video"
+	}
+
+	bookmarks, err := client.GetBookmarks(tag)
+	if err != nil {
+		panic(err)
+	}
+
+	processBookmarks(client, ytdlp, bookmarks)
+}
+
+func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmarks []linkding.Bookmark) {
+	jobs := make(chan *linkding.Bookmark, maxConcurrency)
 	var wg sync.WaitGroup
 
 	slog.Info("Processing bookmarks", "count", len(bookmarks))
+	failedCount := 0
 
 	for _, bookmark := range bookmarks {
 		wg.Add(1)
-		sem <- bookmark.Id
+		jobs <- &bookmark
 
 		go func() {
 			defer wg.Done()
-			defer func() { <-sem }()
-			addVideoAsset(client, ytdlp, &bookmark)
+			defer func() { <-jobs }()
+
+			if err := processBookmark(client, ytdlp, &bookmark); err != nil {
+				failedCount++
+			}
 		}()
 	}
 
 	wg.Wait()
 
-	slog.Info("Done processing bookmarks", "count", len(bookmarks))
+	slog.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
 }
 
-func addVideoAsset(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) (err error) {
+func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) (err error) {
 	logger := slog.With("bookmarkId", bookmark.Id)
 	logger.Info("Processing bookmark")
 
 	assets, err := client.GetBookmarkAssets(bookmark.Id)
 
 	if err != nil {
+		logger.Error("Failed to fetch bookmark assets")
 		return
 	}
 
