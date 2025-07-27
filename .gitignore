@@ -1,0 +1,9 @@
+.env
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+linkding-video-downloader/linkding-video-downloader
