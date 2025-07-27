@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"linkding-video-downloader/linkding"
 	"linkding-video-downloader/logging"
 	"linkding-video-downloader/ytdlp"
@@ -18,6 +19,10 @@ import (
 func main() {
 	godotenv.Load()
 
+	isDryRun := flag.Bool("n", false, "Dry run: download videos but do not actually upload them to Linkding")
+	isSingleRun := flag.Bool("s", false, "Single run: exit after processing bookmarks instead")
+	flag.Parse()
+
 	logger := logging.NewLogger()
 	slog.SetDefault(logger)
 
@@ -31,19 +36,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	onExit(func() { os.RemoveAll(tempdir) })
+	cleanupAndExit := func(code int) {
+		os.RemoveAll(tempdir)
+		os.Exit(code)
+	}
+
+	onInterrupt(cleanupAndExit)
 
 	ytdlp := ytdlp.NewYtdlp(tempdir)
 	tag := getLinkdingTag()
 	interval := getScanInterval()
-	sleep := time.Tick(time.Duration(interval) * time.Second)
+	sleep := time.NewTicker(time.Duration(interval) * time.Second)
 
 	// Run immediately and then on every tick
-	for ; true; <-sleep {
-		err := processBookmarks(client, ytdlp, tag)
+	for ; true; <-sleep.C {
+		err := processBookmarks(client, ytdlp, tag, *isDryRun)
 
 		if err != nil {
 			slog.Error("Error processing bookmarks", "error", err)
+		}
+
+		if *isSingleRun {
+			cleanupAndExit(0)
 		}
 
 		slog.Info("Waiting for next scan", "intervalSeconds", interval)
@@ -70,14 +84,12 @@ func getScanInterval() int {
 	return intervalSeconds
 }
 
-func onExit(cleanup func()) {
+func onInterrupt(cleanup func(int)) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-sigs
-		slog.Info("Exiting...")
-		cleanup()
-		os.Exit(0)
+		cleanup(1)
 	}()
 }

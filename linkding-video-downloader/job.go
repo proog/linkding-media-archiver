@@ -5,11 +5,14 @@ import (
 	"linkding-video-downloader/ytdlp"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"sync"
 )
 
-func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string) (err error) {
+func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string, isDryRun bool) (err error) {
+	logger := slog.With("tag", tag, "isDryRun", isDryRun)
+
 	const concurrency = 4
 
 	bookmarks, err := client.GetBookmarks(tag)
@@ -17,7 +20,7 @@ func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string) (
 		return
 	}
 
-	slog.Info("Processing bookmarks", "count", len(bookmarks), "concurrency", concurrency)
+	logger.Info("Processing bookmarks", "count", len(bookmarks))
 
 	var wg sync.WaitGroup
 	jobs := make(chan *linkding.Bookmark, concurrency)
@@ -31,7 +34,7 @@ func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string) (
 			defer wg.Done()
 			defer func() { <-jobs }()
 
-			if err := processBookmark(client, ytdlp, &bookmark); err != nil {
+			if err := processBookmark(client, ytdlp, &bookmark, isDryRun); err != nil {
 				failedCount++
 			}
 		}()
@@ -39,13 +42,13 @@ func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string) (
 
 	wg.Wait()
 
-	slog.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
+	logger.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
 
 	return
 }
 
-func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) (err error) {
-	logger := slog.With("bookmarkId", bookmark.Id)
+func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark, isDryRun bool) (err error) {
+	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
 	logger.Info("Processing bookmark")
 
 	assets, err := client.GetBookmarkAssets(bookmark.Id)
@@ -81,11 +84,17 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 	defer file.Close()
 	defer os.Remove(path)
 
-	asset, err := client.AddBookmarkAsset(bookmark.Id, file)
+	var asset *linkding.Asset
 
-	if err != nil {
-		logger.Error("Failed to add asset", "error", err)
-		return
+	if isDryRun {
+		asset = &linkding.Asset{Id: -1, AssetType: "upload", ContentType: "video/mp4", DisplayName: "Simulated Asset" + filepath.Ext(file.Name())}
+	} else {
+		asset, err = client.AddBookmarkAsset(bookmark.Id, file)
+
+		if err != nil {
+			logger.Error("Failed to add asset", "error", err)
+			return
+		}
 	}
 
 	logger.Info("Bookmark processed successfully", "assetId", asset.Id)
