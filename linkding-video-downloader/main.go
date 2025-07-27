@@ -6,9 +6,9 @@ import (
 	"linkding-video-downloader/ytdlp"
 	"log/slog"
 	"os"
-	"slices"
+	"os/signal"
 	"strconv"
-	"sync"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -30,7 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	defer os.RemoveAll(tempdir)
+	onExit(func() { os.RemoveAll(tempdir) })
 
 	ytdlp := ytdlp.NewYtdlp(tempdir)
 	tag := getLinkdingTag()
@@ -39,90 +39,14 @@ func main() {
 
 	// Run immediately and then on every tick
 	for ; true; <-sleep {
-		bookmarks, err := client.GetBookmarks(tag)
+		err := processBookmarks(client, ytdlp, tag)
+
 		if err != nil {
-			panic(err)
+			slog.Error("Error processing bookmarks", "error", err)
 		}
 
-		processBookmarks(client, ytdlp, bookmarks)
 		slog.Info("Waiting for next scan", "intervalSeconds", interval)
 	}
-}
-
-func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmarks []linkding.Bookmark) {
-	const concurrency = 4
-
-	slog.Info("Processing bookmarks", "count", len(bookmarks), "concurrency", concurrency)
-
-	var wg sync.WaitGroup
-	jobs := make(chan *linkding.Bookmark, concurrency)
-	failedCount := 0
-
-	for _, bookmark := range bookmarks {
-		wg.Add(1)
-		jobs <- &bookmark
-
-		go func() {
-			defer wg.Done()
-			defer func() { <-jobs }()
-
-			if err := processBookmark(client, ytdlp, &bookmark); err != nil {
-				failedCount++
-			}
-		}()
-	}
-
-	wg.Wait()
-
-	slog.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
-}
-
-func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) (err error) {
-	logger := slog.With("bookmarkId", bookmark.Id)
-	logger.Info("Processing bookmark")
-
-	assets, err := client.GetBookmarkAssets(bookmark.Id)
-
-	if err != nil {
-		logger.Error("Failed to fetch bookmark assets")
-		return
-	}
-
-	videoAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
-		return asset.AssetType == "upload" && linkding.IsKnownMimeType(asset.ContentType)
-	})
-
-	if videoAssetIndex > -1 {
-		logger.Info("Video asset already exists", "assetId", assets[videoAssetIndex].Id)
-		return
-	}
-
-	path, err := ytdlp.DownloadVideo(bookmark.Url)
-
-	if err != nil {
-		logger.Error("Failed to download video", "error", err)
-		return
-	}
-
-	file, err := os.Open(path)
-
-	if err != nil {
-		logger.Error("Failed to open video file", "path", path, "error", err)
-		return
-	}
-
-	defer file.Close()
-	defer os.Remove(path)
-
-	asset, err := client.AddBookmarkAsset(bookmark.Id, file)
-
-	if err != nil {
-		logger.Error("Failed to add asset", "error", err)
-		return
-	}
-
-	logger.Info("Bookmark processed successfully", "assetId", asset.Id)
-	return
 }
 
 func getLinkdingTag() string {
@@ -143,4 +67,16 @@ func getScanInterval() int {
 	}
 
 	return intervalSeconds
+}
+
+func onExit(cleanup func()) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		slog.Info("Exiting...")
+		cleanup()
+		os.Exit(0)
+	}()
 }
