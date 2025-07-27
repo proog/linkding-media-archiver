@@ -12,8 +12,6 @@ RUN go build -v -o /ldvd ./
 
 FROM alpine:latest
 
-WORKDIR /app
-
 RUN apk add --no-cache yt-dlp
 
 COPY --from=builder /ldvd /
