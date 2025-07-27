@@ -7,13 +7,13 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 )
-
-const maxConcurrency = 4
 
 func main() {
 	err := godotenv.Load()
@@ -35,26 +35,31 @@ func main() {
 	}
 
 	defer os.RemoveAll(tempdir)
+
 	ytdlp := ytdlp.NewYtdlp(tempdir)
+	tag := getLinkdingTag()
+	interval := getScanInterval()
+	sleep := time.Tick(time.Duration(interval) * time.Second)
 
-	tag := os.Getenv("LD_TAG")
-	if tag == "" {
-		tag = "video"
+	// Run immediately and then on every tick
+	for ; true; <-sleep {
+		bookmarks, err := client.GetBookmarks(tag)
+		if err != nil {
+			panic(err)
+		}
+
+		processBookmarks(client, ytdlp, bookmarks)
+		slog.Info("Waiting for next scan", "intervalSeconds", interval)
 	}
-
-	bookmarks, err := client.GetBookmarks(tag)
-	if err != nil {
-		panic(err)
-	}
-
-	processBookmarks(client, ytdlp, bookmarks)
 }
 
 func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmarks []linkding.Bookmark) {
-	jobs := make(chan *linkding.Bookmark, maxConcurrency)
-	var wg sync.WaitGroup
+	const concurrency = 4
 
-	slog.Info("Processing bookmarks", "count", len(bookmarks))
+	slog.Info("Processing bookmarks", "count", len(bookmarks), "concurrency", concurrency)
+
+	var wg sync.WaitGroup
+	jobs := make(chan *linkding.Bookmark, concurrency)
 	failedCount := 0
 
 	for _, bookmark := range bookmarks {
@@ -122,4 +127,24 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 
 	logger.Info("Bookmark processed successfully", "assetId", asset.Id)
 	return
+}
+
+func getLinkdingTag() string {
+	tag := os.Getenv("LD_TAG")
+
+	if tag == "" {
+		tag = "video"
+	}
+
+	return tag
+}
+
+func getScanInterval() int {
+	intervalSeconds, err := strconv.Atoi(os.Getenv("SCAN_INTERVAL_SECONDS"))
+
+	if intervalSeconds <= 0 || err != nil {
+		intervalSeconds = 3600
+	}
+
+	return intervalSeconds
 }
