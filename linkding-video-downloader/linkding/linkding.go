@@ -23,11 +23,12 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 
 func (client *Client) GetBookmarks(tag string) ([]Bookmark, error) {
 	logger := slog.With("tag", tag)
-	logger.Info("Fetching bookmarks")
+	logger.Debug("Fetching bookmarks")
 
 	endpointUrl := client.url("bookmarks/")
 	query := endpointUrl.Query()
 	query.Set("q", "#"+tag)
+	query.Set("limit", "10")
 	endpointUrl.RawQuery = query.Encode()
 
 	results, err := getAllItems[Bookmark](endpointUrl, func(url *url.URL) (*http.Response, error) {
@@ -35,7 +36,7 @@ func (client *Client) GetBookmarks(tag string) ([]Bookmark, error) {
 	})
 
 	if err == nil {
-		logger.Info("Fetched bookmarks", "count", len(results))
+		logger.Debug("Fetched bookmarks", "count", len(results))
 	}
 
 	return results, err
@@ -43,7 +44,7 @@ func (client *Client) GetBookmarks(tag string) ([]Bookmark, error) {
 
 func (client *Client) GetBookmarkAssets(bookmarkId int) ([]Asset, error) {
 	logger := slog.With("bookmarkId", bookmarkId)
-	logger.Info("Fetching assets for bookmark")
+	logger.Debug("Fetching assets for bookmark")
 
 	endpointUrl := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets/")
 
@@ -52,7 +53,7 @@ func (client *Client) GetBookmarkAssets(bookmarkId int) ([]Asset, error) {
 	})
 
 	if err == nil {
-		slog.Info("Fetched assets for bookmark", "count", len(results))
+		slog.Debug("Fetched assets for bookmark", "count", len(results))
 	}
 
 	return results, err
@@ -60,7 +61,7 @@ func (client *Client) GetBookmarkAssets(bookmarkId int) ([]Asset, error) {
 
 func (client *Client) DownloadBookmarkAsset(bookmarkId int, assetId int) (io.ReadCloser, error) {
 	logger := slog.With("bookmarkId", bookmarkId, "assetId", assetId)
-	logger.Info("Downloading asset content")
+	logger.Debug("Downloading asset content")
 
 	endpointUrl := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets", strconv.Itoa(assetId), "download/")
 	resp, err := client.get(endpointUrl, nil)
@@ -74,7 +75,7 @@ func (client *Client) DownloadBookmarkAsset(bookmarkId int, assetId int) (io.Rea
 
 func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, error) {
 	logger := slog.With("bookmarkId", bookmarkId)
-	logger.Info("Adding asset for bookmark")
+	logger.Debug("Adding asset for bookmark")
 
 	var multipartBody bytes.Buffer
 	formData, err := createMultipartBody(&multipartBody, file)
@@ -92,7 +93,7 @@ func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, e
 		return nil, err
 	}
 
-	logger.Info("Added asset")
+	logger.Debug("Added asset")
 
 	return deserialize[Asset](resp)
 }
@@ -120,7 +121,7 @@ func (client *Client) send(method string, url *url.URL, body io.Reader, headers 
 	req.Header.Set("Authorization", fmt.Sprint("Token ", client.Token))
 
 	logger := slog.With("method", method, "url", url)
-	logger.Info("Sending HTTP request")
+	logger.Debug("Sending HTTP request")
 
 	resp, err := http.DefaultClient.Do(req)
 
@@ -129,7 +130,7 @@ func (client *Client) send(method string, url *url.URL, body io.Reader, headers 
 	}
 
 	logger = logger.With("statusCode", resp.StatusCode)
-	logger.Info("Received HTTP response")
+	logger.Debug("Received HTTP response")
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return resp, fmt.Errorf("expected success status code, was %s", resp.Status)

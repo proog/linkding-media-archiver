@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func deserialize[T any](resp *http.Response) (*T, error) {
@@ -66,9 +67,13 @@ func createMultipartBody(buffer *bytes.Buffer, file *os.File) (*multipart.Writer
 	defer formData.Close()
 
 	fileName := filepath.Base(file.Name())
-	mimeType := getMimeType(fileName)
+	mimeType, err := getMimeType(fileName)
 
-	slog.Info("Creating multipart with MIME type", "mimeType", mimeType, "fileName", fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Debug("Creating multipart with MIME type", "mimeType", mimeType, "fileName", fileName)
 
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, "file", fileName))
@@ -87,12 +92,12 @@ func createMultipartBody(buffer *bytes.Buffer, file *os.File) (*multipart.Writer
 	return formData, nil
 }
 
-func getMimeType(fileName string) string {
+func getMimeType(fileName string) (string, error) {
 	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
 
-	if mimeType == "" {
-		return "application/octet-stream"
+	if !strings.HasPrefix(mimeType, "video/") {
+		return "", fmt.Errorf("%s is not a video MIME type for %s", mimeType, fileName)
 	}
 
-	return mimeType
+	return mimeType, nil
 }

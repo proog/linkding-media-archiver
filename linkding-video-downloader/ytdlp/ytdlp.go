@@ -24,7 +24,7 @@ func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	cmd := exec.Command("yt-dlp", args...)
 	cmd.Dir = ytdlp.DownloadDir
 
-	logger.Info("Downloading video", "command", cmd)
+	logger.Debug("Downloading video", "command", cmd)
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -40,7 +40,7 @@ func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	}
 
 	path := strings.TrimSpace(string(output))
-	logger.Info("Downloaded video", "path", path)
+	logger.Debug("Downloaded video", "path", path)
 
 	return path, nil
 }

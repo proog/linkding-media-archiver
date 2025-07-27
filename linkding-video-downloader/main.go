@@ -5,6 +5,8 @@ import (
 	"linkding-video-downloader/ytdlp"
 	"log/slog"
 	"os"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -35,12 +37,14 @@ func main() {
 		panic(err)
 	}
 
-	defer os.Remove(tempdir)
+	defer os.RemoveAll(tempdir)
 	ytdlp := ytdlp.NewYtdlp(tempdir)
 
 	concurrency := 3
 	sem := make(chan int, concurrency)
 	var wg sync.WaitGroup
+
+	slog.Info("Processing bookmarks", "count", len(bookmarks))
 
 	for _, bookmark := range bookmarks {
 		wg.Add(1)
@@ -54,28 +58,41 @@ func main() {
 	}
 
 	wg.Wait()
+
+	slog.Info("Done processing bookmarks", "count", len(bookmarks))
 }
 
-func addVideoAsset(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) error {
+func addVideoAsset(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark) (err error) {
 	logger := slog.With("bookmarkId", bookmark.Id)
 	logger.Info("Processing bookmark")
 
-	// TODO: check if video asset already exists
+	assets, err := client.GetBookmarkAssets(bookmark.Id)
 
-	// assets, err := ld.GetBookmarkAssets(bookmark.Id)
+	if err != nil {
+		return
+	}
+
+	videoAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
+		return asset.AssetType == "upload" && strings.HasPrefix(asset.ContentType, "video/")
+	})
+
+	if videoAssetIndex > -1 {
+		logger.Info("Video asset already exists", "assetId", assets[videoAssetIndex].Id)
+		return
+	}
 
 	path, err := ytdlp.DownloadVideo(bookmark.Url)
 
 	if err != nil {
 		logger.Error("Failed to download video", "error", err)
-		return err
+		return
 	}
 
 	file, err := os.Open(path)
 
 	if err != nil {
 		logger.Error("Failed to open video file", "path", path, "error", err)
-		return err
+		return
 	}
 
 	defer file.Close()
@@ -85,9 +102,9 @@ func addVideoAsset(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkdi
 
 	if err != nil {
 		logger.Error("Failed to add asset", "error", err)
-		return err
+		return
 	}
 
-	logger.Info("Bookmark processed", "assetId", asset.Id)
-	return nil
+	logger.Info("Bookmark processed successfully", "assetId", asset.Id)
+	return
 }
