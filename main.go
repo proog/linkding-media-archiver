@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
-	"linkding-video-downloader/linkding"
-	"linkding-video-downloader/logging"
-	"linkding-video-downloader/ytdlp"
+	"linkding-media-archiver/linkding"
+	"linkding-media-archiver/logging"
+	"linkding-media-archiver/ytdlp"
 	"log"
 	"log/slog"
 	"os"

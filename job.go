@@ -1,8 +1,8 @@
 package main
 
 import (
-	"linkding-video-downloader/linkding"
-	"linkding-video-downloader/ytdlp"
+	"linkding-media-archiver/linkding"
+	"linkding-media-archiver/ytdlp"
 	"log/slog"
 	"os"
 	"path/filepath"

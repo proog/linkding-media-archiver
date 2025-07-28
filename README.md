@@ -1,3 +1,3 @@
-# Linkding Video Downloader
+# Linkding Media Archiver
 
-Automatically archive videos bookmarked in Linkding using [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+Automatically archive media bookmarked in Linkding using [yt-dlp](https://github.com/yt-dlp/yt-dlp)

@@ -1,4 +1,4 @@
-module linkding-video-downloader
+module linkding-media-archiver
 
 go 1.24.5
 
