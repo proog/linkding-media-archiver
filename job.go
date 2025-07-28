@@ -23,23 +23,28 @@ func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string, i
 	logger.Info("Processing bookmarks", "count", len(bookmarks))
 
 	var wg sync.WaitGroup
-	jobs := make(chan *linkding.Bookmark, concurrency)
+	bookmarkJobs := make(chan linkding.Bookmark, len(bookmarks))
 	failedCount := 0
 
-	for _, bookmark := range bookmarks {
+	for w := 1; w <= concurrency; w++ {
 		wg.Add(1)
-		jobs <- &bookmark
 
 		go func() {
 			defer wg.Done()
-			defer func() { <-jobs }()
 
+			for bookmark := range bookmarkJobs {
 			if err := processBookmark(client, ytdlp, &bookmark, isDryRun); err != nil {
 				failedCount++
+				}
 			}
 		}()
 	}
 
+	for _, bookmark := range bookmarks {
+		bookmarkJobs <- bookmark
+	}
+
+	close(bookmarkJobs)
 	wg.Wait()
 
 	logger.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
