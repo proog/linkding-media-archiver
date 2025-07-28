@@ -48,9 +48,12 @@ func main() {
 	interval := getScanInterval()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
 
+	var lastScan time.Time
+
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
-		err := processBookmarks(client, ytdlp, tag, *isDryRun)
+		query := linkding.BookmarksQuery{Tag: tag, ModifiedSince: lastScan}
+		err := processBookmarks(client, ytdlp, &query, *isDryRun)
 
 		if err != nil {
 			slog.Error("Error processing bookmarks", "error", err)
@@ -60,6 +63,7 @@ func main() {
 			cleanupAndExit(0)
 		}
 
+		lastScan = time.Now()
 		slog.Info("Waiting for next scan", "intervalSeconds", interval)
 	}
 }

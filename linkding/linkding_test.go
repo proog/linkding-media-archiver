@@ -14,7 +14,7 @@ func TestGetBookmarks(t *testing.T) {
 	client, err := NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
 	check(t, err)
 
-	bookmarks, err := client.GetBookmarks("video")
+	bookmarks, err := client.GetBookmarks(&BookmarksQuery{Tag: "video"})
 	check(t, err)
 
 	if len(bookmarks) == 0 {
@@ -23,8 +23,8 @@ func TestGetBookmarks(t *testing.T) {
 }
 
 func TestAddBookmarkAsset(t *testing.T) {
-	const expectedDisplayName = "test-asset.txt"
-	const expectedContentType = "text/plain"
+	const expectedDisplayName = "test-asset.mp4"
+	const expectedContentType = "video/mp4"
 	expectedContent := []byte("Test content")
 
 	godotenv.Load("../.env")
@@ -39,7 +39,7 @@ func TestAddBookmarkAsset(t *testing.T) {
 	file.Sync()
 	file.Seek(0, 0)
 
-	bookmarks, err := client.GetBookmarks("video")
+	bookmarks, err := client.GetBookmarks(&BookmarksQuery{Tag: "video"})
 	check(t, err)
 
 	bookmark := bookmarks[0]

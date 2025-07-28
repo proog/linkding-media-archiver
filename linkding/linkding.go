@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 )
 
 func NewClient(baseUrl string, token string) (*Client, error) {
@@ -25,14 +26,22 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 	return &Client{BaseUrl: parsedUrl, Token: token}, nil
 }
 
-func (client *Client) GetBookmarks(tag string) ([]Bookmark, error) {
-	logger := slog.With("tag", tag)
+func (client *Client) GetBookmarks(query *BookmarksQuery) ([]Bookmark, error) {
+	logger := slog.With("tag", query.Tag, "modifiedSince", query.ModifiedSince)
 	logger.Debug("Fetching bookmarks")
 
 	endpointUrl := client.url("bookmarks/")
-	query := endpointUrl.Query()
-	query.Set("q", "#"+tag)
-	endpointUrl.RawQuery = query.Encode()
+	queryParams := endpointUrl.Query()
+
+	if query.Tag != "" {
+		queryParams.Set("q", "#"+query.Tag)
+	}
+
+	if !query.ModifiedSince.IsZero() {
+		queryParams.Set("modified_since", query.ModifiedSince.UTC().Format(time.RFC3339))
+	}
+
+	endpointUrl.RawQuery = queryParams.Encode()
 
 	results, err := getAllItems[Bookmark](endpointUrl, func(url *url.URL) (*http.Response, error) {
 		return client.get(url, nil)
@@ -123,7 +132,7 @@ func (client *Client) send(method string, url *url.URL, body io.Reader, headers 
 
 	req.Header.Set("Authorization", fmt.Sprint("Token ", client.Token))
 
-	logger := slog.With("method", method, "url", url)
+	logger := slog.With("method", method, "url", url.String())
 	logger.Debug("Sending HTTP request")
 
 	resp, err := http.DefaultClient.Do(req)

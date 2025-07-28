@@ -1,6 +1,9 @@
 package linkding
 
-import "net/url"
+import (
+	"net/url"
+	"time"
+)
 
 type Bookmark struct {
 	Id    int
@@ -25,4 +28,9 @@ type PagedResponse[T any] struct {
 type Client struct {
 	BaseUrl *url.URL
 	Token   string
+}
+
+type BookmarksQuery struct {
+	Tag           string
+	ModifiedSince time.Time
 }

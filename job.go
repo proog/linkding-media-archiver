@@ -10,12 +10,12 @@ import (
 	"sync"
 )
 
-func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string, isDryRun bool) (err error) {
-	logger := slog.With("tag", tag, "isDryRun", isDryRun)
+func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, query *linkding.BookmarksQuery, isDryRun bool) (err error) {
+	logger := slog.With("tag", query.Tag, "isDryRun", isDryRun)
 
 	const concurrency = 4
 
-	bookmarks, err := client.GetBookmarks(tag)
+	bookmarks, err := client.GetBookmarks(query)
 	if err != nil {
 		return
 	}
@@ -33,8 +33,8 @@ func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, tag string, i
 			defer wg.Done()
 
 			for bookmark := range bookmarkJobs {
-			if err := processBookmark(client, ytdlp, &bookmark, isDryRun); err != nil {
-				failedCount++
+				if err := processBookmark(client, ytdlp, &bookmark, isDryRun); err != nil {
+					failedCount++
 				}
 			}
 		}()
