@@ -19,7 +19,7 @@ import (
 func main() {
 	godotenv.Load()
 
-	isDryRun := flag.Bool("n", false, "Dry run: download videos but do not actually upload them to Linkding")
+	isDryRun := flag.Bool("n", false, "Dry run: download media but do not actually upload it to Linkding")
 	isSingleRun := flag.Bool("s", false, "Single run: exit after processing bookmarks instead")
 	flag.Parse()
 
@@ -31,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	tempdir, err := os.MkdirTemp(os.TempDir(), "videos")
+	tempdir, err := os.MkdirTemp(os.TempDir(), "media")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -63,26 +63,26 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 		return
 	}
 
-	videoAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
+	mediaAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
 		return asset.AssetType == "upload" && linkding.IsKnownMimeType(asset.ContentType)
 	})
 
-	if videoAssetIndex > -1 {
-		logger.Info("Video asset already exists", "assetId", assets[videoAssetIndex].Id)
+	if mediaAssetIndex > -1 {
+		logger.Info("Media asset already exists", "assetId", assets[mediaAssetIndex].Id)
 		return
 	}
 
-	path, err := ytdlp.DownloadVideo(bookmark.Url)
+	path, err := ytdlp.DownloadMedia(bookmark.Url)
 
 	if err != nil {
-		logger.Error("Failed to download video", "error", err)
+		logger.Error("Failed to download media", "error", err)
 		return
 	}
 
 	file, err := os.Open(path)
 
 	if err != nil {
-		logger.Error("Failed to open video file", "path", path, "error", err)
+		logger.Error("Failed to open media file", "path", path, "error", err)
 		return
 	}
 
@@ -92,7 +92,12 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 	var asset *linkding.Asset
 
 	if isDryRun {
-		asset = &linkding.Asset{Id: -1, AssetType: "upload", ContentType: "video/mp4", DisplayName: "Simulated Asset" + filepath.Ext(file.Name())}
+		mimeType, err := linkding.GetMimeType(file.Name())
+		if err != nil {
+			return err
+		}
+
+		asset = &linkding.Asset{Id: -1, AssetType: "upload", ContentType: mimeType, DisplayName: "Simulated Asset" + filepath.Ext(file.Name())}
 	} else {
 		asset, err = client.AddBookmarkAsset(bookmark.Id, file)
 

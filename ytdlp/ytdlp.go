@@ -11,10 +11,10 @@ func NewYtdlp(downloadDir string) *Ytdlp {
 	return &Ytdlp{DownloadDir: downloadDir}
 }
 
-func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
+func (ytdlp *Ytdlp) DownloadMedia(url string) (string, error) {
 	logger := slog.With("url", url)
 
-	tempdir, err := os.MkdirTemp(ytdlp.DownloadDir, "video")
+	tempdir, err := os.MkdirTemp(ytdlp.DownloadDir, "media")
 
 	if err != nil {
 		return "", err
@@ -32,7 +32,7 @@ func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	cmd := exec.Command("yt-dlp", args...)
 	cmd.Dir = tempdir
 
-	logger.Debug("Downloading video", "command", cmd.String())
+	logger.Debug("Downloading media", "command", cmd.String())
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -48,7 +48,7 @@ func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	}
 
 	path := strings.TrimSpace(string(output))
-	logger.Debug("Downloaded video", "path", path)
+	logger.Debug("Downloaded media", "path", path)
 
 	return path, nil
 }

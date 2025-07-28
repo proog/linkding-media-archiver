@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestDownloadVideo(t *testing.T) {
+func TestDownloadMedia(t *testing.T) {
 	ytdlp := Ytdlp{DownloadDir: t.TempDir()}
-	path, err := ytdlp.DownloadVideo("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
+	path, err := ytdlp.DownloadMedia("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
 
 	if err != nil {
 		t.Fatal(err)
