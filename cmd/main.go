@@ -21,7 +21,7 @@ func main() {
 	godotenv.Load()
 
 	isDryRun := flag.Bool("n", false, "Dry run: download media but do not actually upload it to Linkding")
-	isSingleRun := flag.Bool("s", false, "Single run: exit after processing bookmarks instead")
+	isSingleRun := flag.Bool("s", false, "Single run: exit after processing bookmarks once")
 	flag.Parse()
 
 	logger := logging.NewLogger()
