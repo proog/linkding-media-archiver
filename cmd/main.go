@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"linkding-media-archiver/linkding"
-	"linkding-media-archiver/logging"
-	"linkding-media-archiver/ytdlp"
+	"linkding-media-archiver/internal/job"
+	"linkding-media-archiver/internal/linkding"
+	"linkding-media-archiver/internal/logging"
+	"linkding-media-archiver/internal/ytdlp"
 	"log"
 	"log/slog"
 	"os"
@@ -53,7 +54,7 @@ func main() {
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
 		query := linkding.BookmarksQuery{Tag: tag, ModifiedSince: lastScan}
-		err := processBookmarks(client, ytdlp, &query, *isDryRun)
+		err := job.ProcessBookmarks(client, ytdlp, &query, *isDryRun)
 
 		if err != nil {
 			slog.Error("Error processing bookmarks", "error", err)

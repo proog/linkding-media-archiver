@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -v -o /app ./
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -v -o /app ./cmd/main.go
 
 
 FROM alpine:latest

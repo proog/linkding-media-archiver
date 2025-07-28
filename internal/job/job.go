@@ -1,8 +1,8 @@
-package main
+package job
 
 import (
-	"linkding-media-archiver/linkding"
-	"linkding-media-archiver/ytdlp"
+	"linkding-media-archiver/internal/linkding"
+	"linkding-media-archiver/internal/ytdlp"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-func processBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, query *linkding.BookmarksQuery, isDryRun bool) (err error) {
+func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, query *linkding.BookmarksQuery, isDryRun bool) (err error) {
 	logger := slog.With("tag", query.Tag, "isDryRun", isDryRun)
 
 	const concurrency = 4
