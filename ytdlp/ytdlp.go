@@ -2,6 +2,7 @@ package ytdlp
 
 import (
 	"log/slog"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -13,8 +14,15 @@ func NewYtdlp(downloadDir string) *Ytdlp {
 func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	logger := slog.With("url", url)
 
+	tempdir, err := os.MkdirTemp(ytdlp.DownloadDir, "video")
+
+	if err != nil {
+		return "", err
+	}
+
 	args := []string{
 		"--no-simulate",
+		"--no-playlist",
 		"--restrict-filenames",
 		"--print",
 		"after_move:filepath", // https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#outtmpl-postprocess-note
@@ -22,9 +30,9 @@ func (ytdlp *Ytdlp) DownloadVideo(url string) (string, error) {
 	}
 
 	cmd := exec.Command("yt-dlp", args...)
-	cmd.Dir = ytdlp.DownloadDir
+	cmd.Dir = tempdir
 
-	logger.Debug("Downloading video", "command", cmd)
+	logger.Debug("Downloading video", "command", cmd.String())
 	output, err := cmd.Output()
 
 	if err != nil {
