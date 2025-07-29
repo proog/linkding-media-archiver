@@ -28,7 +28,7 @@ func main() {
 	logger := logging.NewLogger()
 	slog.SetDefault(logger)
 
-	client, err := linkding.NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
+	client, err := linkding.NewClient(os.Getenv("LDMA_BASEURL"), os.Getenv("LDMA_TOKEN"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,6 +55,8 @@ func main() {
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
 		config := job.JobConfiguration{Tags: tags, IsDryRun: *isDryRun, LastScan: lastScan}
+
+		lastScan = time.Now() // Update before processing bookmarks as that might take a long time
 		err := job.ProcessBookmarks(client, ytdlp, config)
 
 		if err != nil {
@@ -65,24 +67,23 @@ func main() {
 			cleanupAndExit(0)
 		}
 
-		lastScan = time.Now()
-		logger.Info("Waiting for next scan", "intervalSeconds", interval)
+		logger.Info("Waiting for next scan", "scanInterval", interval)
 	}
 }
 
 func getLinkdingTags() []string {
-	tagsEnv := os.Getenv("LD_TAGS")
+	tagsEnv := os.Getenv("LDMA_TAGS")
 	return strings.Fields(tagsEnv)
 }
 
 func getScanInterval() int {
-	intervalSeconds, err := strconv.Atoi(os.Getenv("SCAN_INTERVAL_SECONDS"))
+	interval, err := strconv.Atoi(os.Getenv("LDMA_SCAN_INTERVAL"))
 
-	if intervalSeconds <= 0 || err != nil {
-		intervalSeconds = 3600
+	if interval <= 0 || err != nil {
+		interval = 3600
 	}
 
-	return intervalSeconds
+	return interval
 }
 
 func onInterrupt(cleanup func(int)) {

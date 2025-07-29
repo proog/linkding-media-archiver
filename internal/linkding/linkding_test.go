@@ -106,7 +106,7 @@ func TestAddBookmarkAsset(t *testing.T) {
 func getClient(t *testing.T) *Client {
 	godotenv.Load("../../.env")
 
-	client, err := NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
+	client, err := NewClient(os.Getenv("LDMA_BASEURL"), os.Getenv("LDMA_TOKEN"))
 	check(t, err)
 
 	return client

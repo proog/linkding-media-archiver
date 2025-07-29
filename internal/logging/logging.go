@@ -14,7 +14,7 @@ func NewLogger() *slog.Logger {
 }
 
 func getLogLevel() slog.Level {
-	level := os.Getenv("LOG_LEVEL")
+	level := os.Getenv("LDMA_LOG_LEVEL")
 
 	switch strings.ToUpper(level) {
 	case "DEBUG":

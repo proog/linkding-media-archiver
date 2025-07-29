@@ -20,6 +20,11 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 		return
 	}
 
+	if len(bookmarks) == 0 {
+		logger.Info("No bookmarks to process")
+		return
+	}
+
 	logger.Info("Processing bookmarks", "count", len(bookmarks))
 
 	var wg sync.WaitGroup
