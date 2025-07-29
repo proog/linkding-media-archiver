@@ -11,18 +11,17 @@ func NewYtdlp(downloadDir string) *Ytdlp {
 	return &Ytdlp{DownloadDir: downloadDir}
 }
 
-func (ytdlp *Ytdlp) DownloadMedia(url string) (string, error) {
+func (ytdlp *Ytdlp) DownloadMedia(url string) ([]string, error) {
 	logger := slog.With("url", url)
 
 	tempdir, err := os.MkdirTemp(ytdlp.DownloadDir, "media")
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	args := []string{
 		"--no-simulate",
-		"--no-playlist",
 		"--restrict-filenames",
 		"--print",
 		"after_move:filepath", // https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#outtmpl-postprocess-note
@@ -44,11 +43,15 @@ func (ytdlp *Ytdlp) DownloadMedia(url string) (string, error) {
 		}
 
 		logger.Error("yt-dlp error", "stderr", stderr)
-		return "", err
+		return nil, err
 	}
 
-	path := strings.TrimSpace(string(output))
-	logger.Debug("Downloaded media", "path", path)
+	paths := make([]string, 0, 10)
+	for line := range strings.Lines(string(output)) {
+		paths = append(paths, strings.TrimSpace(line))
+	}
 
-	return path, nil
+	logger.Debug("Downloaded media", "paths", paths)
+
+	return paths, nil
 }

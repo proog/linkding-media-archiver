@@ -80,7 +80,7 @@ func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.
 	return bookmarks, nil
 }
 
-func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark, isDryRun bool) (err error) {
+func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark, isDryRun bool) error {
 	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
 	logger.Info("Processing bookmark")
 
@@ -88,7 +88,7 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 
 	if err != nil {
 		logger.Error("Failed to fetch bookmark assets")
-		return
+		return err
 	}
 
 	mediaAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
@@ -97,44 +97,51 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 
 	if mediaAssetIndex > -1 {
 		logger.Info("Media asset already exists", "assetId", assets[mediaAssetIndex].Id)
-		return
+		return err
 	}
 
-	path, err := ytdlp.DownloadMedia(bookmark.Url)
+	paths, err := ytdlp.DownloadMedia(bookmark.Url)
 
 	if err != nil {
 		logger.Error("Failed to download media", "error", err)
-		return
+		return err
 	}
 
-	file, err := os.Open(path)
+	for _, path := range paths {
+		file, err := os.Open(path)
 
-	if err != nil {
-		logger.Error("Failed to open media file", "path", path, "error", err)
-		return
-	}
-
-	defer file.Close()
-	defer os.Remove(path)
-
-	var asset *linkding.Asset
-
-	if isDryRun {
-		mimeType, err := linkding.GetMimeType(file.Name())
 		if err != nil {
+			logger.Error("Failed to open media file", "path", path, "error", err)
 			return err
 		}
 
-		asset = &linkding.Asset{Id: -1, AssetType: "upload", ContentType: mimeType, DisplayName: "Simulated Asset" + filepath.Ext(file.Name())}
-	} else {
-		asset, err = client.AddBookmarkAsset(bookmark.Id, file)
+		defer file.Close()
+		defer os.Remove(path)
+
+		asset, err := uploadAsset(client, bookmark, file, isDryRun)
 
 		if err != nil {
 			logger.Error("Failed to add asset", "error", err)
-			return
+			return err
 		}
+
+		logger.Info("Asset added successfully", "assetId", asset.Id)
 	}
 
-	logger.Info("Bookmark processed successfully", "assetId", asset.Id)
-	return
+	logger.Info("Bookmark processed successfully")
+	return nil
+}
+
+func uploadAsset(client *linkding.Client, bookmark *linkding.Bookmark, file *os.File, isDryRun bool) (*linkding.Asset, error) {
+	if isDryRun {
+		mimeType, err := linkding.GetMimeType(file.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		asset := &linkding.Asset{Id: -1, AssetType: "upload", ContentType: mimeType, DisplayName: "Simulated Asset" + filepath.Ext(file.Name())}
+		return asset, nil
+	}
+
+	return client.AddBookmarkAsset(bookmark.Id, file)
 }

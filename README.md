@@ -10,12 +10,10 @@ Linkding can automatically create HTML snapshots of your bookmarks to guard agai
 
 Linkding Media Archiver retrieves bookmarks that do not already have a media file attached and attempts to download one using [yt-dlp](https://github.com/yt-dlp/yt-dlp). If successful, the file is uploaded to Linkding as a bookmark asset. This process repeats on a configurable schedule with any bookmarks that have been added or changed since the previous run. If Linkding Media Archiver is restarted, it will retrieve all bookmarks again.
 
-As yt-dlp is used to download media, [any site supported by yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) should work. Please report a bug if Linkding Media Archiver fails to add a file that yt-dlp provides.
+As yt-dlp is used to download media, [any site supported by yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) should work. Please report a bug if Linkding Media Archiver fails to use a file that yt-dlp provides. Currently, yt-dlp's default format selection is used, which generally means the highest quality available in any file type.
 
-## Limitations
-
-- Downloading multiple files per bookmark (such as YouTube playlists) is not supported
-- yt-dlp uses default format and quality settings (i.e. the highest quality available and no fixed media formats)
+> [!WARNING]
+> yt-dlp supports many arbitrary websites with its "generic extractor", which might cause Linkding Media Archiver to download and attach media for unexpected bookmarks — for instance, a promotional video on a product landing page. For this reason, it is highly recommended to limit the bookmark selection to one or more tags using the `LD_TAGS` environment variable.
 
 ## Usage
 
