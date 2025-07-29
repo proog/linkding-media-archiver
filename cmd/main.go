@@ -53,8 +53,8 @@ func main() {
 
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
-		query := linkding.BookmarksQuery{Tag: tag, ModifiedSince: lastScan}
-		err := job.ProcessBookmarks(client, ytdlp, &query, *isDryRun)
+		config := job.JobConfiguration{Tag: tag, IsDryRun: *isDryRun, LastScan: lastScan}
+		err := job.ProcessBookmarks(client, ytdlp, config)
 
 		if err != nil {
 			slog.Error("Error processing bookmarks", "error", err)

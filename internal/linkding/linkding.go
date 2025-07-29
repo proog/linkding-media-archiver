@@ -26,7 +26,7 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 	return &Client{BaseUrl: parsedUrl, Token: token}, nil
 }
 
-func (client *Client) GetBookmarks(query *BookmarksQuery) ([]Bookmark, error) {
+func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
 	logger := slog.With("tag", query.Tag, "modifiedSince", query.ModifiedSince)
 	logger.Debug("Fetching bookmarks")
 
