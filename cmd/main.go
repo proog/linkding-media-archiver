@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -45,7 +46,7 @@ func main() {
 	onInterrupt(cleanupAndExit)
 
 	ytdlp := ytdlp.NewYtdlp(tempdir)
-	tag := getLinkdingTag()
+	tags := getLinkdingTags()
 	interval := getScanInterval()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
 
@@ -53,11 +54,11 @@ func main() {
 
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
-		config := job.JobConfiguration{Tag: tag, IsDryRun: *isDryRun, LastScan: lastScan}
+		config := job.JobConfiguration{Tags: tags, IsDryRun: *isDryRun, LastScan: lastScan}
 		err := job.ProcessBookmarks(client, ytdlp, config)
 
 		if err != nil {
-			slog.Error("Error processing bookmarks", "error", err)
+			logger.Error("Error processing bookmarks", "error", err)
 		}
 
 		if *isSingleRun {
@@ -65,18 +66,13 @@ func main() {
 		}
 
 		lastScan = time.Now()
-		slog.Info("Waiting for next scan", "intervalSeconds", interval)
+		logger.Info("Waiting for next scan", "intervalSeconds", interval)
 	}
 }
 
-func getLinkdingTag() string {
-	tag := os.Getenv("LD_TAG")
-
-	if tag == "" {
-		tag = "video"
-	}
-
-	return tag
+func getLinkdingTags() []string {
+	tagsEnv := os.Getenv("LD_TAGS")
+	return strings.Fields(tagsEnv)
 }
 
 func getScanInterval() int {

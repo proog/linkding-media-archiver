@@ -5,20 +5,63 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/iotest"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
-func TestGetBookmarks(t *testing.T) {
-	godotenv.Load("../../.env")
-	client, err := NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
+const validTag = "video"
+
+func TestGetBookmarksWithTag(t *testing.T) {
+	tests := []string{
+		"",
+		validTag,
+	}
+
+	for _, test := range tests {
+		t.Run(test, func(t *testing.T) {
+			client := getClient(t)
+			bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: test})
+			check(t, err)
+
+			if len(bookmarks) == 0 {
+				t.Fatal("No bookmarks found")
+			}
+		})
+	}
+}
+
+func TestGetBookmarksModifiedSince(t *testing.T) {
+	tests := []time.Time{
+		{},
+		time.Now().Add(-1 * time.Hour),
+	}
+
+	for _, test := range tests {
+		t.Run(test.Format(time.DateTime), func(t *testing.T) {
+			client := getClient(t)
+			bookmarks, err := client.GetBookmarks(BookmarksQuery{ModifiedSince: test})
+			check(t, err)
+
+			if len(bookmarks) == 0 {
+				t.Fatal("No bookmarks found")
+			}
+		})
+	}
+}
+
+func TestGetBookmarkAssets(t *testing.T) {
+	client := getClient(t)
+
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: validTag})
 	check(t, err)
 
-	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: "video"})
+	bookmark := bookmarks[0]
+	assets, err := client.GetBookmarkAssets(bookmark.Id)
 	check(t, err)
 
-	if len(bookmarks) == 0 {
-		t.Fatal("No bookmarks found")
+	if len(assets) == 0 {
+		t.Fatal("No assets found")
 	}
 }
 
@@ -27,9 +70,7 @@ func TestAddBookmarkAsset(t *testing.T) {
 	const expectedContentType = "video/mp4"
 	expectedContent := []byte("Test content")
 
-	godotenv.Load("../../.env")
-	client, err := NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
-	check(t, err)
+	client := getClient(t)
 
 	file, err := os.Create(filepath.Join(t.TempDir(), expectedDisplayName))
 	check(t, err)
@@ -39,7 +80,7 @@ func TestAddBookmarkAsset(t *testing.T) {
 	file.Sync()
 	file.Seek(0, 0)
 
-	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: "video"})
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: validTag})
 	check(t, err)
 
 	bookmark := bookmarks[0]
@@ -60,6 +101,15 @@ func TestAddBookmarkAsset(t *testing.T) {
 
 	err = iotest.TestReader(download, expectedContent)
 	check(t, err)
+}
+
+func getClient(t *testing.T) *Client {
+	godotenv.Load("../../.env")
+
+	client, err := NewClient(os.Getenv("LD_BASEURL"), os.Getenv("LD_TOKEN"))
+	check(t, err)
+
+	return client
 }
 
 func check(t *testing.T, err error) {

@@ -13,6 +13,10 @@ import (
 )
 
 func NewClient(baseUrl string, token string) (*Client, error) {
+	if baseUrl == "" {
+		return nil, fmt.Errorf("base URL is required")
+	}
+
 	parsedUrl, err := url.Parse(baseUrl)
 
 	if err != nil {

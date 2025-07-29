@@ -8,7 +8,7 @@ Linkding can automatically create HTML snapshots of your bookmarks to guard agai
 
 ## How it works
 
-Linkding Media Archiver retrieves all bookmarks with a specific tag that do not already have a media file attached and attempts to download one using [yt-dlp](https://github.com/yt-dlp/yt-dlp). If successful, the file is uploaded to Linkding as a bookmark asset. This process repeats on a configurable schedule with any bookmarks that have been added or changed since the previous run. If Linkding Media Archiver is restarted, it will retrieve all bookmarks again.
+Linkding Media Archiver retrieves bookmarks that do not already have a media file attached and attempts to download one using [yt-dlp](https://github.com/yt-dlp/yt-dlp). If successful, the file is uploaded to Linkding as a bookmark asset. This process repeats on a configurable schedule with any bookmarks that have been added or changed since the previous run. If Linkding Media Archiver is restarted, it will retrieve all bookmarks again.
 
 As yt-dlp is used to download media, [any site supported by yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) should work. Please report a bug if Linkding Media Archiver fails to add a file that yt-dlp provides.
 
@@ -30,10 +30,10 @@ As yt-dlp is used to download media, [any site supported by yt-dlp](https://gith
 
 ### Environment variables
 
-| Name                    | Example                            | Default         | Description                                   |
-| ----------------------- | ---------------------------------- | --------------- | --------------------------------------------- |
-| `LD_BASEURL`            | `http://linkding.example.com:9090` | None            | Base URL of your Linkding instance            |
-| `LD_TOKEN`              | `{random 40 char token}`           | None            | Auth token from the Linkding integration page |
-| `LD_TAG`                | `media`                            | `video`         | Process bookmarks with this tag (omit the #)  |
-| `SCAN_INTERVAL_SECONDS` | `600` (10 mins)                    | `3600` (1 hour) | Schedule to checking for new bookmarks        |
-| `LOG_LEVEL`             | `DEBUG`                            | `INFO`          | Log level, useful for troubleshooting         |
+| Name                    | Example                            | Default              | Description                                                                 |
+| ----------------------- | ---------------------------------- | -------------------- | --------------------------------------------------------------------------- |
+| `LD_BASEURL` (required) | `http://linkding.example.com:9090` | None                 | Base URL of your Linkding instance                                          |
+| `LD_TOKEN` (required)   | `{random 40 char token}`           | None                 | Auth token from the Linkding integration page                               |
+| `LD_TAGS`               | `video music youtube`              | None (all bookmarks) | Only process bookmarks with any of these tags (space separated, omit the #) |
+| `SCAN_INTERVAL_SECONDS` | `600` (10 mins)                    | `3600` (1 hour)      | Schedule to check for new bookmarks                                         |
+| `LOG_LEVEL`             | `DEBUG`                            | `INFO`               | Log level, useful for troubleshooting                                       |

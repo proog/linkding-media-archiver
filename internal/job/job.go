@@ -11,12 +11,11 @@ import (
 )
 
 func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobConfiguration) (err error) {
-	logger := slog.With("tag", config.Tag, "isDryRun", config.IsDryRun)
+	logger := slog.With("tags", config.Tags, "isDryRun", config.IsDryRun)
 
 	const concurrency = 4
 
-	query := linkding.BookmarksQuery{Tag: config.Tag, ModifiedSince: config.LastScan}
-	bookmarks, err := client.GetBookmarks(query)
+	bookmarks, err := getBookmarks(client, config)
 	if err != nil {
 		return
 	}
@@ -51,6 +50,34 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 	logger.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
 
 	return
+}
+
+func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.Bookmark, error) {
+	bookmarks := make([]linkding.Bookmark, 0, 100)
+
+	tags := config.Tags
+	if len(tags) == 0 {
+		tags = []string{""}
+	}
+
+	for _, tag := range tags {
+		query := linkding.BookmarksQuery{Tag: tag, ModifiedSince: config.LastScan}
+		bookmarksForTag, err := client.GetBookmarks(query)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, bookmarkForTag := range bookmarksForTag {
+			exists := slices.ContainsFunc(bookmarks, func(b linkding.Bookmark) bool { return b.Id == bookmarkForTag.Id })
+
+			if !exists {
+				bookmarks = append(bookmarks, bookmarkForTag)
+			}
+		}
+	}
+
+	return bookmarks, nil
 }
 
 func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark, isDryRun bool) (err error) {

@@ -3,7 +3,7 @@ package job
 import "time"
 
 type JobConfiguration struct {
-	Tag      string
+	Tags     []string
 	IsDryRun bool
 	LastScan time.Time
 }
