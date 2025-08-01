@@ -13,8 +13,6 @@ import (
 func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobConfiguration) (err error) {
 	logger := slog.With("tags", config.Tags, "isDryRun", config.IsDryRun)
 
-	const concurrency = 4
-
 	bookmarks, err := getBookmarks(client, config)
 	if err != nil {
 		return
@@ -28,31 +26,33 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 	logger.Info("Processing bookmarks", "count", len(bookmarks))
 
 	var wg sync.WaitGroup
-	bookmarkJobs := make(chan linkding.Bookmark, len(bookmarks))
-	failedCount := 0
+	succeeded := make(chan linkding.Bookmark, len(bookmarks))
+	failed := make(chan linkding.Bookmark, len(bookmarks))
 
-	for w := 1; w <= concurrency; w++ {
+	for _, bookmark := range bookmarks {
+		paths, err := downloadMedia(client, ytdlp, bookmark)
+
+		if err != nil {
+			failed <- bookmark
+			continue
+		}
+
 		wg.Add(1)
-
 		go func() {
 			defer wg.Done()
 
-			for bookmark := range bookmarkJobs {
-				if err := processBookmark(client, ytdlp, &bookmark, config.IsDryRun); err != nil {
-					failedCount++
-				}
+			if err := uploadMedia(client, bookmark, paths, config.IsDryRun); err != nil {
+				failed <- bookmark
+				return
 			}
+
+			succeeded <- bookmark
 		}()
 	}
 
-	for _, bookmark := range bookmarks {
-		bookmarkJobs <- bookmark
-	}
-
-	close(bookmarkJobs)
 	wg.Wait()
 
-	logger.Info("Done processing bookmarks", "succeeded", len(bookmarks)-failedCount, "failed", failedCount)
+	logger.Info("Done processing bookmarks", "succeeded", len(succeeded), "failed", len(failed))
 
 	return
 }
@@ -85,15 +85,13 @@ func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.
 	return bookmarks, nil
 }
 
-func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *linkding.Bookmark, isDryRun bool) error {
-	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
-	logger.Info("Processing bookmark")
-
+func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) ([]string, error) {
+	logger := slog.With("bookmarkId", bookmark.Id)
 	assets, err := client.GetBookmarkAssets(bookmark.Id)
 
 	if err != nil {
 		logger.Error("Failed to fetch bookmark assets")
-		return err
+		return nil, err
 	}
 
 	mediaAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
@@ -102,17 +100,27 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 
 	if mediaAssetIndex > -1 {
 		logger.Info("Media asset already exists", "assetId", assets[mediaAssetIndex].Id)
-		return err
+		return nil, nil
 	}
 
+	logger.Info("Downloading media")
 	paths, err := ytdlp.DownloadMedia(bookmark.Url)
 
 	if err != nil {
 		logger.Error("Failed to download media", "error", err)
-		return err
+		return nil, err
 	}
 
+	logger.Info("Media downloaded successfully", "paths", paths)
+	return paths, nil
+}
+
+func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, paths []string, isDryRun bool) error {
+	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
+
 	for _, path := range paths {
+		logger.Info("Adding asset", "path", path)
+
 		file, err := os.Open(path)
 
 		if err != nil {
@@ -126,18 +134,17 @@ func processBookmark(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark *link
 		asset, err := uploadAsset(client, bookmark, file, isDryRun)
 
 		if err != nil {
-			logger.Error("Failed to add asset", "error", err)
+			logger.Error("Failed to add asset", "path", path, "error", err)
 			return err
 		}
 
-		logger.Info("Asset added successfully", "assetId", asset.Id)
+		logger.Info("Asset added successfully", "path", path, "assetId", asset.Id)
 	}
 
-	logger.Info("Bookmark processed successfully")
 	return nil
 }
 
-func uploadAsset(client *linkding.Client, bookmark *linkding.Bookmark, file *os.File, isDryRun bool) (*linkding.Asset, error) {
+func uploadAsset(client *linkding.Client, bookmark linkding.Bookmark, file *os.File, isDryRun bool) (*linkding.Asset, error) {
 	if isDryRun {
 		mimeType, err := linkding.GetMimeType(file.Name())
 		if err != nil {
