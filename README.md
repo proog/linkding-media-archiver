@@ -17,9 +17,12 @@ As yt-dlp is used to download media, [any site supported by yt-dlp](https://gith
 
 ## Usage
 
-Linkding Media Archiver requires [yt-dlp](https://github.com/yt-dlp/yt-dlp) and a [Linkding](https://linkding.link/) instance to work. The easiest way to run it is by using [the Docker image](https://hub.docker.com/r/proog/linkding-media-archiver), which includes yt-dlp. Alternatively, it can be run as a binary by cloning the repository and compiling from source.
+Linkding Media Archiver requires [yt-dlp](https://github.com/yt-dlp/yt-dlp) and a [Linkding](https://linkding.link/) instance to work. The easiest way to run it is by using [the Docker image](https://hub.docker.com/r/proog/linkding-media-archiver), which includes yt-dlp. See `docker-compose.example.yml` for an example Docker Compose setup that combines Linkding and Linkding Media Archiver. Alternatively, it can be run as a binary by cloning the repository and compiling from source.
 
 ```sh
+# Docker Compose (preferred, see docker-compose.example.yml)
+docker compose up
+
 # Docker
 docker run --rm -e LDMA_BASEURL="http://localhost:9090" -e LDMA_TOKEN="abcd1234" proog/linkding-media-archiver [-n] [-s]
 

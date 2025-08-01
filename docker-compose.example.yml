@@ -1,0 +1,22 @@
+services:
+  linkding:
+    container_name: linkding
+    restart: unless-stopped
+    image: sissbruecker/linkding:latest-plus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./linkding-data:/etc/linkding/data
+
+  linkding-media-archiver:
+    container_name: linkding-media-archiver
+    restart: unless-stopped
+    image: proog/linkding-media-archiver:latest
+    depends_on:
+      linkding:
+        condition: service_healthy
+    environment:
+      - LDMA_BASEURL=http://linkding:9090
+      - LDMA_TOKEN= # Add your Linkding token
+      - LDMA_TAGS=video music youtube
+      - LDMA_SCAN_INTERVAL=3600
