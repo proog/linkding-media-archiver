@@ -28,7 +28,7 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 		return nil, fmt.Errorf("base URL is not absolute: %s", baseUrl)
 	}
 
-	return &Client{BaseUrl: parsedUrl, Token: token}, nil
+	return &Client{BaseUrl: *parsedUrl, Token: token}, nil
 }
 
 func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
@@ -48,8 +48,8 @@ func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
 
 	endpointUrl.RawQuery = queryParams.Encode()
 
-	results, err := getAllItems[Bookmark](endpointUrl, func(url *url.URL) (*http.Response, error) {
-		return client.get(url, nil)
+	results, err := getAllItems[Bookmark](endpointUrl, func(u url.URL) (*http.Response, error) {
+		return client.get(u)
 	})
 
 	if err == nil {
@@ -65,8 +65,8 @@ func (client *Client) GetBookmarkAssets(bookmarkId int) ([]Asset, error) {
 
 	endpointUrl := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets/")
 
-	results, err := getAllItems[Asset](endpointUrl, func(url *url.URL) (*http.Response, error) {
-		return client.get(url, nil)
+	results, err := getAllItems[Asset](endpointUrl, func(u url.URL) (*http.Response, error) {
+		return client.get(u)
 	})
 
 	if err == nil {
@@ -81,7 +81,7 @@ func (client *Client) DownloadBookmarkAsset(bookmarkId int, assetId int) (io.Rea
 	logger.Debug("Downloading asset content")
 
 	endpointUrl := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets", strconv.Itoa(assetId), "download/")
-	resp, err := client.get(endpointUrl, nil)
+	resp, err := client.get(endpointUrl)
 
 	if err != nil {
 		return nil, err
@@ -149,16 +149,16 @@ func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, e
 	return deserialize[Asset](resp)
 }
 
-func (client *Client) url(path ...string) *url.URL {
+func (client *Client) url(path ...string) url.URL {
 	path = append([]string{"api"}, path...)
-	return client.BaseUrl.JoinPath(path...)
+	return *client.BaseUrl.JoinPath(path...)
 }
 
-func (client *Client) get(url *url.URL, headers map[string]string) (*http.Response, error) {
-	return client.send(http.MethodGet, url, headers, nil, 0)
+func (client *Client) get(url url.URL) (*http.Response, error) {
+	return client.send(http.MethodGet, url, nil, nil, 0)
 }
 
-func (client *Client) send(method string, url *url.URL, headers map[string]string, body io.Reader, contentLength int64) (*http.Response, error) {
+func (client *Client) send(method string, url url.URL, headers map[string]string, body io.Reader, contentLength int64) (*http.Response, error) {
 	req, err := http.NewRequest(method, url.String(), body)
 
 	if err != nil {

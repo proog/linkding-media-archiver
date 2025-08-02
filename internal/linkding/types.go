@@ -26,7 +26,7 @@ type PagedResponse[T any] struct {
 }
 
 type Client struct {
-	BaseUrl *url.URL
+	BaseUrl url.URL
 	Token   string
 }
 

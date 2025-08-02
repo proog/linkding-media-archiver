@@ -24,12 +24,12 @@ func deserialize[T any](resp *http.Response) (*T, error) {
 	return &result, err
 }
 
-func getAllItems[T any](url *url.URL, getPage func(*url.URL) (*http.Response, error)) ([]T, error) {
+func getAllItems[T any](initialUrl url.URL, getPage func(url.URL) (*http.Response, error)) ([]T, error) {
 	results := make([]T, 0)
-	nextUrl := url
+	nextUrl := &initialUrl
 
 	for nextUrl != nil {
-		resp, err := getPage(nextUrl)
+		resp, err := getPage(*nextUrl)
 
 		if err != nil {
 			return nil, err
