@@ -1,10 +1,11 @@
 package linkding
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -93,19 +94,53 @@ func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, e
 	logger := slog.With("bookmarkId", bookmarkId)
 	logger.Debug("Adding asset for bookmark")
 
-	var multipartBody bytes.Buffer
-	formData, err := createMultipartBody(&multipartBody, file)
-
+	stat, err := file.Stat()
 	if err != nil {
 		return nil, err
 	}
 
+	fileName := stat.Name()
+	fileSize := stat.Size()
+	mimeType, err := GetMimeType(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	const fieldName = "file"
+
+	// Pipe the file contents directly to the http request without loading the entire file into memory
+	readBody, writeBody := io.Pipe()
+	formData := multipart.NewWriter(writeBody)
+
+	partErr := make(chan error, 1)
+	go func() {
+		defer writeBody.Close()
+		defer close(partErr)
+
+		part, err := createMultipartPart(formData, fieldName, fileName, mimeType)
+		if err != nil {
+			partErr <- err
+			return
+		}
+
+		// This blocks until the http request reads from the pipe
+		if _, err := io.CopyN(part, file, fileSize); err != nil {
+			writeBody.CloseWithError(err)
+			partErr <- err
+			return
+		}
+
+		// Important! Write the closing boundary to the part
+		partErr <- formData.Close()
+	}()
+
 	url := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets/upload/")
 	headers := map[string]string{"Content-Type": formData.FormDataContentType()}
+	contentLength := emptyMultipartPartLength(fieldName, fileName, mimeType) + fileSize
 
-	resp, err := client.send(http.MethodPost, url, &multipartBody, headers)
+	resp, err := client.send(http.MethodPost, url, headers, readBody, contentLength)
 
-	if err != nil {
+	if err := errors.Join(err, <-partErr); err != nil {
 		return nil, err
 	}
 
@@ -120,14 +155,18 @@ func (client *Client) url(path ...string) *url.URL {
 }
 
 func (client *Client) get(url *url.URL, headers map[string]string) (*http.Response, error) {
-	return client.send(http.MethodGet, url, nil, headers)
+	return client.send(http.MethodGet, url, headers, nil, 0)
 }
 
-func (client *Client) send(method string, url *url.URL, body io.Reader, headers map[string]string) (*http.Response, error) {
+func (client *Client) send(method string, url *url.URL, headers map[string]string, body io.Reader, contentLength int64) (*http.Response, error) {
 	req, err := http.NewRequest(method, url.String(), body)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if contentLength != 0 {
+		req.ContentLength = contentLength
 	}
 
 	for key, value := range headers {

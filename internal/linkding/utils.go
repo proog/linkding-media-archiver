@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"os"
-	"path/filepath"
 )
 
 func deserialize[T any](resp *http.Response) (*T, error) {
@@ -60,32 +57,21 @@ func getAllItems[T any](url *url.URL, getPage func(*url.URL) (*http.Response, er
 	return results, nil
 }
 
-func createMultipartBody(buffer *bytes.Buffer, file *os.File) (*multipart.Writer, error) {
-	formData := multipart.NewWriter(buffer)
-	defer formData.Close()
-
-	fileName := filepath.Base(file.Name())
-	mimeType, err := GetMimeType(fileName)
-
-	if err != nil {
-		return nil, err
-	}
-
-	slog.Debug("Creating multipart with MIME type", "mimeType", mimeType, "fileName", fileName)
-
+func createMultipartPart(formData *multipart.Writer, fieldName, fileName, mimeType string) (io.Writer, error) {
+	// Can't use formData.CreateFormFile() as it forces the application/octet-stream content type
 	header := make(textproto.MIMEHeader)
-	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, "file", fileName))
+	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, fieldName, fileName))
 	header.Set("Content-Type", mimeType)
 
-	part, err := formData.CreatePart(header)
+	return formData.CreatePart(header)
+}
 
-	if err != nil {
-		return nil, err
-	}
+func emptyMultipartPartLength(fieldName, fileName, mimeType string) int64 {
+	body := &bytes.Buffer{}
+	formData := multipart.NewWriter(body)
 
-	if _, err := io.Copy(part, file); err != nil {
-		return nil, err
-	}
+	createMultipartPart(formData, fieldName, fileName, mimeType)
+	formData.Close()
 
-	return formData, nil
+	return int64(body.Len())
 }
