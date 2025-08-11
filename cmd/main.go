@@ -54,12 +54,14 @@ func main() {
 
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
-		config := job.JobConfiguration{Tags: tags, IsDryRun: *isDryRun, LastScan: lastScan}
+		timeBeforeRun := time.Now()
 
-		lastScan = time.Now() // Update before processing bookmarks as that might take a long time
+		config := job.JobConfiguration{Tags: tags, IsDryRun: *isDryRun, LastScan: lastScan}
 		err := job.ProcessBookmarks(client, ytdlp, config)
 
-		if err != nil {
+		if err == nil {
+			lastScan = timeBeforeRun // Only update last scan time when bookmarks were actually processed
+		} else {
 			logger.Error("Error processing bookmarks", "error", err)
 		}
 
