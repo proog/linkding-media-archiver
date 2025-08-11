@@ -45,7 +45,7 @@ func main() {
 
 	onInterrupt(cleanupAndExit)
 
-	ytdlp := ytdlp.NewYtdlp(tempdir)
+	ytdlp := ytdlp.NewYtdlp(tempdir, os.Getenv("LDMA_FORMAT"))
 	tags := getLinkdingTags()
 	interval := getScanInterval()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
