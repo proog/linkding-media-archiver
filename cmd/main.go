@@ -46,6 +46,7 @@ func main() {
 	onInterrupt(cleanupAndExit)
 
 	ytdlp := ytdlp.NewYtdlp(tempdir)
+	ytdlp.MaxHeight = getMaxHeight()
 	tags := getLinkdingTags()
 	interval := getScanInterval()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
@@ -94,4 +95,13 @@ func onInterrupt(cleanup func(int)) {
 		<-sigs
 		cleanup(1)
 	}()
+}
+
+func getMaxHeight() int {
+    // 0 disables the cap; default to 1024p if unset/invalid
+    h, err := strconv.Atoi(os.Getenv("LDMA_MAX_HEIGHT"))
+    if err != nil {
+      h = 1024
+    }
+    return h
 }
