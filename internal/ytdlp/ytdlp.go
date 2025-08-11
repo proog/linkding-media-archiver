@@ -1,15 +1,14 @@
 package ytdlp
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func NewYtdlp(downloadDir string) *Ytdlp {
-	return &Ytdlp{DownloadDir: downloadDir}
+func NewYtdlp(downloadDir string, format string) *Ytdlp {
+	return &Ytdlp{DownloadDir: downloadDir, Format: format}
 }
 
 func (ytdlp *Ytdlp) DownloadMedia(url string) ([]string, error) {
@@ -21,23 +20,7 @@ func (ytdlp *Ytdlp) DownloadMedia(url string) ([]string, error) {
 		return nil, err
 	}
 
-	args := []string{
-		"--no-simulate",
-		"--restrict-filenames",
-		"--print",
-		"after_move:filepath", // https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#outtmpl-postprocess-note
-		url,
-	}
-
-	if ytdlp.MaxHeight > 0 {
-		// Prefer single-file best up to MaxHeight to keep behavior similar to default.
-		// Fallback selects bestvideo+bestaudio muxed up to MaxHeight when needed, and final fallback keeps the cap.
-		format := fmt.Sprintf("b[height<=%d]/bv*[height<=%d]+ba/b[height<=%d]", ytdlp.MaxHeight, ytdlp.MaxHeight, ytdlp.MaxHeight)
-		args = append(args, "--format", format)
-	}
-
-	args = append(args, url)
-	cmd := exec.Command("yt-dlp", args...)
+	cmd := ytdlp.cmd(url)
 	cmd.Dir = tempdir
 
 	logger.Debug("Downloading media", "command", cmd.String())
@@ -63,4 +46,23 @@ func (ytdlp *Ytdlp) DownloadMedia(url string) ([]string, error) {
 	logger.Debug("Downloaded media", "paths", paths)
 
 	return paths, nil
+}
+
+func (ytdlp *Ytdlp) cmd(url string) *exec.Cmd {
+	args := []string{
+		"--no-simulate",
+		"--restrict-filenames",
+		"--print",
+		"after_move:filepath", // https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#outtmpl-postprocess-note
+	}
+
+	// https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection
+	if len(ytdlp.Format) > 0 {
+		args = append(args, "--format", ytdlp.Format)
+	}
+
+	args = append(args, url)
+	cmd := exec.Command("yt-dlp", args...)
+
+	return cmd
 }
