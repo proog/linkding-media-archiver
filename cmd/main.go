@@ -47,6 +47,7 @@ func main() {
 
 	ytdlp := ytdlp.NewYtdlp(tempdir, os.Getenv("LDMA_FORMAT"))
 	tags := getLinkdingTags()
+	bundleId := getLinkdingBundleId()
 	interval := getScanInterval()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
 
@@ -56,7 +57,7 @@ func main() {
 	for ; true; <-sleep.C {
 		timeBeforeRun := time.Now()
 
-		config := job.JobConfiguration{Tags: tags, IsDryRun: *isDryRun, LastScan: lastScan}
+		config := job.JobConfiguration{Tags: tags, BundleId: bundleId, IsDryRun: *isDryRun, LastScan: lastScan}
 		err := job.ProcessBookmarks(client, ytdlp, config)
 
 		if err == nil {
@@ -76,6 +77,16 @@ func main() {
 func getLinkdingTags() []string {
 	tagsEnv := os.Getenv("LDMA_TAGS")
 	return strings.Fields(tagsEnv)
+}
+
+func getLinkdingBundleId() int {
+	bundleId, err := strconv.Atoi(os.Getenv("LDMA_BUNDLE_ID"))
+
+	if bundleId <= 0 || err != nil {
+		bundleId = 0
+	}
+
+	return bundleId
 }
 
 func getScanInterval() int {

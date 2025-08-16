@@ -32,5 +32,6 @@ type Client struct {
 
 type BookmarksQuery struct {
 	Tag           string
+	BundleId      int
 	ModifiedSince time.Time
 }
