@@ -11,6 +11,7 @@ import (
 )
 
 const validTag = "video"
+const validBundleId = 2
 
 func TestGetBookmarksWithTag(t *testing.T) {
 	tests := []string{
@@ -28,6 +29,19 @@ func TestGetBookmarksWithTag(t *testing.T) {
 				t.Fatal("No bookmarks found")
 			}
 		})
+	}
+}
+
+func TestGetBookmarksWithBundle(t *testing.T) {
+	client := getClient(t)
+	allBookmarks, err := client.GetBookmarks(BookmarksQuery{})
+	check(t, err)
+
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{BundleId: validBundleId})
+	check(t, err)
+
+	if !(len(bookmarks) < len(allBookmarks)) {
+		t.Fatal("Bundle query did not filter the result")
 	}
 }
 

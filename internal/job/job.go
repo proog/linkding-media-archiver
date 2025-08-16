@@ -11,7 +11,7 @@ import (
 )
 
 func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobConfiguration) (err error) {
-	logger := slog.With("tags", config.Tags, "isDryRun", config.IsDryRun)
+	logger := slog.With("tags", config.Tags, "bundleId", config.BundleId, "isDryRun", config.IsDryRun)
 
 	bookmarks, err := getBookmarks(client, config)
 	if err != nil {
@@ -66,7 +66,7 @@ func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.
 	}
 
 	for _, tag := range tags {
-		query := linkding.BookmarksQuery{Tag: tag, ModifiedSince: config.LastScan}
+		query := linkding.BookmarksQuery{Tag: tag, BundleId: config.BundleId, ModifiedSince: config.LastScan}
 		bookmarksForTag, err := client.GetBookmarks(query)
 
 		if err != nil {

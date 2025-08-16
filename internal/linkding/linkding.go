@@ -32,7 +32,7 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 }
 
 func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
-	logger := slog.With("tag", query.Tag, "modifiedSince", query.ModifiedSince)
+	logger := slog.With("tag", query.Tag, "bundleId", query.BundleId, "modifiedSince", query.ModifiedSince)
 	logger.Debug("Fetching bookmarks")
 
 	endpointUrl := client.url("bookmarks/")
@@ -40,6 +40,10 @@ func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
 
 	if query.Tag != "" {
 		queryParams.Set("q", "#"+query.Tag)
+	}
+
+	if query.BundleId > 0 {
+		queryParams.Set("bundle", strconv.Itoa(query.BundleId))
 	}
 
 	if !query.ModifiedSince.IsZero() {
