@@ -8,6 +8,7 @@ on:
 env:
   OTHER_REPO: yt-dlp/yt-dlp
   WORKFLOW: docker.yml
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
 jobs:
   check-release:
@@ -16,18 +17,22 @@ jobs:
       - name: Get latest release from other repo
         id: other
         run: |
-          DATA=$(curl -s https://api.github.com/repos/$OTHER_REPO/releases/latest)
-          TAG=$(echo "$DATA" | jq -r .tag_name)
-          DATE=$(echo "$DATA" | jq -r .published_at)
+          DATA=$(gh release view --repo "$OTHER_REPO" --json tagName,publishedAt)
+          TAG=$(echo "$DATA" | jq -r .tagName)
+          DATE=$(echo "$DATA" | jq -r .publishedAt)
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
-      - name: Get latest release from this repo
+      - name: Get latest workflow run of latest release from this repo
         id: ours
         run: |
-          DATA=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-          TAG=$(echo "$DATA" | jq -r .tag_name)
-          DATE=$(echo "$DATA" | jq -r .published_at)
+          DATA=$(gh release view --repo "${{ github.repository }}" --json tagName)
+          TAG=$(echo "$DATA" | jq -r .tagName)
+
+          RUN_DATA=$(gh run list --repo "${{ github.repository }}" --branch "$TAG" --workflow "$WORKFLOW" --limit 1 --json startedAt)
+          DATE=$(echo "$RUN_DATA" | jq -r '.[0].startedAt')
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
@@ -36,6 +41,6 @@ jobs:
         run: |
           echo "Detected newer release in $OTHER_REPO!"
           echo "Other repo tag: ${{ steps.other.outputs.tag }} (published ${{ steps.other.outputs.date }})"
-          echo "Our repo tag:   ${{ steps.ours.outputs.tag }} (published ${{ steps.ours.outputs.date }})"
+          echo "Our repo tag:   ${{ steps.ours.outputs.tag }} (last run ${{ steps.ours.outputs.date }})"
 
-          gh workflow run "$WORKFLOW" --ref "${{ steps.ours.outputs.tag }}"
+          gh workflow run "$WORKFLOW" --repo "${{ github.repository }}" --ref "${{ steps.ours.outputs.tag }}"
