@@ -1,5 +1,8 @@
 # Linkding Media Archiver
 
+[![GitHub Release](https://img.shields.io/github/v/release/proog/linkding-media-archiver?sort=semver&style=for-the-badge&logo=github&label=Latest%20Release)](https://github.com/proog/linkding-media-archiver/releases)
+[![Docker Image Version](https://img.shields.io/docker/v/proog/linkding-media-archiver?sort=semver&style=for-the-badge&logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/proog/linkding-media-archiver)
+
 Automatically download media for your [Linkding](https://linkding.link/) bookmarks!
 
 ## What it is
