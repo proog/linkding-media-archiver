@@ -1,4 +1,5 @@
 .env
+data/
 *.exe
 *.exe~
 *.dll
