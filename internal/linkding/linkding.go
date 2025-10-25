@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,14 +33,14 @@ func NewClient(baseUrl string, token string) (*Client, error) {
 }
 
 func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
-	logger := slog.With("tag", query.Tag, "bundleId", query.BundleId, "modifiedSince", query.ModifiedSince)
+	logger := slog.With("tags", query.Tags, "bundleId", query.BundleId, "modifiedSince", query.ModifiedSince)
 	logger.Debug("Fetching bookmarks")
 
 	endpointUrl := client.url("bookmarks/")
 	queryParams := endpointUrl.Query()
 
-	if query.Tag != "" {
-		queryParams.Set("q", "#"+query.Tag)
+	if len(query.Tags) > 0 {
+		queryParams.Set("q", "#"+strings.Join(query.Tags, " or #"))
 	}
 
 	if query.BundleId > 0 {

@@ -58,31 +58,8 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 }
 
 func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.Bookmark, error) {
-	bookmarks := make([]linkding.Bookmark, 0, 100)
-
-	tags := config.Tags
-	if len(tags) == 0 {
-		tags = []string{""}
-	}
-
-	for _, tag := range tags {
-		query := linkding.BookmarksQuery{Tag: tag, BundleId: config.BundleId, ModifiedSince: config.LastScan}
-		bookmarksForTag, err := client.GetBookmarks(query)
-
-		if err != nil {
-			return nil, err
-		}
-
-		for _, bookmarkForTag := range bookmarksForTag {
-			exists := slices.ContainsFunc(bookmarks, func(b linkding.Bookmark) bool { return b.Id == bookmarkForTag.Id })
-
-			if !exists {
-				bookmarks = append(bookmarks, bookmarkForTag)
-			}
-		}
-	}
-
-	return bookmarks, nil
+	query := linkding.BookmarksQuery{Tags: config.Tags, BundleId: config.BundleId, ModifiedSince: config.LastScan}
+	return client.GetBookmarks(query)
 }
 
 func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) ([]string, error) {

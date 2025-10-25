@@ -3,6 +3,7 @@ package linkding
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -12,22 +13,35 @@ import (
 )
 
 const validTag = "video"
+const validTag2 = "music"
 const validBundleId = 2
 
-func TestGetBookmarksWithTag(t *testing.T) {
-	tests := []string{
-		"",
-		validTag,
+func TestGetBookmarksWithTags(t *testing.T) {
+	tests := [][]string{
+		{},
+		{validTag},
+		{validTag, validTag2},
+		{"3922EBE2-A681-4EAD-A5EA-89FF4B2CBCBE", validTag2},
 	}
 
 	for _, test := range tests {
-		t.Run(test, func(t *testing.T) {
+		t.Run(strings.Join(test, ","), func(t *testing.T) {
 			client := getClient(t)
-			bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: test})
+			bookmarks, err := client.GetBookmarks(BookmarksQuery{Tags: test})
 			check(t, err)
 
 			if len(bookmarks) == 0 {
 				t.Fatal("No bookmarks found")
+			}
+
+			if len(test) > 0 {
+				for _, bookmark := range bookmarks {
+					hasTag := slices.ContainsFunc(bookmark.TagNames, func(tag string) bool { return slices.Contains(test, tag) })
+
+					if !hasTag {
+						t.Errorf("Bookmark %d did not have the expected tags", bookmark.Id)
+					}
+				}
 			}
 		})
 	}
@@ -68,7 +82,7 @@ func TestGetBookmarksModifiedSince(t *testing.T) {
 func TestGetBookmarkAssets(t *testing.T) {
 	client := getClient(t)
 
-	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: validTag})
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tags: []string{validTag}})
 	check(t, err)
 
 	bookmark := bookmarks[0]
@@ -95,7 +109,7 @@ func TestAddBookmarkAsset(t *testing.T) {
 	file.Sync()
 	file.Seek(0, 0)
 
-	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tag: validTag})
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tags: []string{validTag}})
 	check(t, err)
 
 	bookmark := bookmarks[0]
