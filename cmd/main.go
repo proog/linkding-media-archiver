@@ -49,6 +49,7 @@ func main() {
 	tags := getLinkdingTags()
 	bundleId := getLinkdingBundleId()
 	interval := getScanInterval()
+	skipExisting := getSkipExistingBookmarks()
 	sleep := time.NewTicker(time.Duration(interval) * time.Second)
 
 	var lastScan time.Time
@@ -56,6 +57,12 @@ func main() {
 	// Run immediately and then on every tick
 	for ; true; <-sleep.C {
 		timeBeforeRun := time.Now()
+
+		if skipExisting && lastScan.IsZero() {
+			logger.Info("Waiting for initial scan", "scanInterval", interval)
+			lastScan = timeBeforeRun
+			continue
+		}
 
 		config := job.JobConfiguration{Tags: tags, BundleId: bundleId, IsDryRun: *isDryRun, LastScan: lastScan}
 		err := job.ProcessBookmarks(client, ytdlp, config)
@@ -97,6 +104,11 @@ func getScanInterval() int {
 	}
 
 	return interval
+}
+
+func getSkipExistingBookmarks() bool {
+	skip, err := strconv.ParseBool(os.Getenv("LDMA_SKIP_EXISTING_BOOKMARKS"))
+	return err == nil && skip
 }
 
 func onInterrupt(cleanup func(int)) {

@@ -11,7 +11,7 @@ Linkding can automatically create HTML snapshots of your bookmarks to guard agai
 
 ## How it works
 
-Linkding Media Archiver retrieves bookmarks that do not already have a media file attached and attempts to download one using [yt-dlp](https://github.com/yt-dlp/yt-dlp). If successful, the file is uploaded to Linkding as a bookmark asset. This process repeats on a configurable schedule with any bookmarks that have been added or changed since the previous run. If Linkding Media Archiver is restarted, it will retrieve all bookmarks again.
+Linkding Media Archiver retrieves bookmarks that do not already have a media file attached and attempts to download one using [yt-dlp](https://github.com/yt-dlp/yt-dlp). If successful, the file is uploaded to Linkding as a bookmark asset. This process repeats on a configurable schedule with any bookmarks that have been added or changed since the previous run. If Linkding Media Archiver is restarted, it will retrieve all bookmarks again (configurable, see `LDMA_SKIP_EXISTING_BOOKMARKS`).
 
 As yt-dlp is used to download media, [any site supported by yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) should work. Please report a bug if Linkding Media Archiver fails to use a file that yt-dlp provides. yt-dlp's default format selection is used, which generally means the highest quality available in any file type, unless otherwise specified via the `LDMA_FORMAT` environment variable. Multiple files (such as YouTube playlists) are supported and will be added as multiple assets.
 
@@ -41,12 +41,13 @@ LDMA_BASEURL="http://localhost:9090" LDMA_TOKEN="abcd1234" ./linkding-media-arch
 
 ### Environment variables
 
-| Name                 | Example                            | Default                | Description                                                                                                                                         |
-| -------------------- | ---------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LDMA_BASEURL`       | `http://linkding.example.com:9090` | None **(required)**    | Base URL of your Linkding instance                                                                                                                  |
-| `LDMA_TOKEN`         | `{random 40 char token}`           | None **(required)**    | Auth token from the Linkding integration page                                                                                                       |
-| `LDMA_TAGS`          | `video music youtube`              | None (all bookmarks)   | Only process bookmarks with any of these tags (space separated, omit the #)                                                                         |
-| `LDMA_BUNDLE_ID`     | `42`                               | None (all bookmarks)   | Only process bookmarks matching this [bundle](https://github.com/sissbruecker/linkding/pull/1097) (get the id from the url when editing the bundle) |
-| `LDMA_FORMAT`        | `best[ext=mp4]`                    | None (yt-dlp defaults) | Format selection expression ([see yt-dlp docs](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection))                               |
-| `LDMA_SCAN_INTERVAL` | `600` (10 mins)                    | `3600` (1 hour)        | Schedule to check for new bookmarks                                                                                                                 |
-| `LDMA_LOG_LEVEL`     | `DEBUG`                            | `INFO`                 | Log level, useful for troubleshooting                                                                                                               |
+| Name                           | Example                            | Default                | Description                                                                                                                                         |
+| ------------------------------ | ---------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LDMA_BASEURL`                 | `http://linkding.example.com:9090` | None **(required)**    | Base URL of your Linkding instance                                                                                                                  |
+| `LDMA_TOKEN`                   | `{random 40 char token}`           | None **(required)**    | Auth token from the Linkding integration page                                                                                                       |
+| `LDMA_TAGS`                    | `video music youtube`              | None (all bookmarks)   | Only process bookmarks with any of these tags (space separated, omit the #)                                                                         |
+| `LDMA_BUNDLE_ID`               | `42`                               | None (all bookmarks)   | Only process bookmarks matching this [bundle](https://github.com/sissbruecker/linkding/pull/1097) (get the id from the url when editing the bundle) |
+| `LDMA_SKIP_EXISTING_BOOKMARKS` | `true`                             | `false`                | Only process bookmarks added or changed after the program was started                                                                               |
+| `LDMA_FORMAT`                  | `best[ext=mp4]`                    | None (yt-dlp defaults) | Format selection expression ([see yt-dlp docs](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection))                               |
+| `LDMA_SCAN_INTERVAL`           | `600` (10 mins)                    | `3600` (1 hour)        | Schedule to check for new bookmarks (in seconds)                                                                                                    |
+| `LDMA_LOG_LEVEL`               | `DEBUG`                            | `INFO`                 | Log level, useful for troubleshooting                                                                                                               |
