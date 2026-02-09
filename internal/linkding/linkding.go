@@ -153,6 +153,21 @@ func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, e
 	return deserialize[Asset](resp)
 }
 
+func (client *Client) GetUserProfile() (*UserProfile, error) {
+	slog.Debug("Fetching user profile")
+
+	endpointUrl := client.url("user/profile/")
+	resp, err := client.get(endpointUrl)
+
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Debug("Fetched user profile")
+
+	return deserialize[UserProfile](resp)
+}
+
 func (client *Client) url(path ...string) url.URL {
 	path = append([]string{"api"}, path...)
 	return *client.BaseUrl.JoinPath(path...)

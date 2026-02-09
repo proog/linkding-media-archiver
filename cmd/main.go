@@ -28,21 +28,14 @@ func main() {
 	logger := logging.NewLogger()
 	slog.SetDefault(logger)
 
-	client, err := linkding.NewClient(os.Getenv("LDMA_BASEURL"), os.Getenv("LDMA_TOKEN"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	client := createLinkdingClient()
+	checkHealth(client)
 
-	tempdir, err := os.MkdirTemp(os.TempDir(), "media")
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	tempdir := createTempDir()
 	cleanupAndExit := func(code int) {
 		os.RemoveAll(tempdir)
 		os.Exit(code)
 	}
-
 	onInterrupt(cleanupAndExit)
 
 	ytdlp := ytdlp.NewYtdlp(tempdir, os.Getenv("LDMA_FORMAT"))
@@ -79,6 +72,34 @@ func main() {
 
 		logger.Info("Waiting for next scan", "scanInterval", interval)
 	}
+}
+
+func createLinkdingClient() *linkding.Client {
+	client, err := linkding.NewClient(os.Getenv("LDMA_BASEURL"), os.Getenv("LDMA_TOKEN"))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return client
+}
+
+func checkHealth(client *linkding.Client) {
+	_, err := client.GetUserProfile()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func createTempDir() string {
+	tempdir, err := os.MkdirTemp(os.TempDir(), "media")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return tempdir
 }
 
 func getLinkdingTags() []string {
