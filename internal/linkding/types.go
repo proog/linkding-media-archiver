@@ -35,3 +35,7 @@ type BookmarksQuery struct {
 	BundleId      int
 	ModifiedSince time.Time
 }
+
+type UserProfile struct {
+	Version string
+}

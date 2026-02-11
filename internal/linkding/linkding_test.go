@@ -3,6 +3,7 @@ package linkding
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/iotest"
 	"time"
@@ -115,6 +116,16 @@ func TestAddBookmarkAsset(t *testing.T) {
 
 	err = iotest.TestReader(download, expectedContent)
 	check(t, err)
+}
+
+func TestGetUserProfile(t *testing.T) {
+	client := getClient(t)
+	profile, err := client.GetUserProfile()
+	check(t, err)
+
+	if len(strings.SplitN(profile.Version, ".", 3)) != 3 {
+		t.Fatalf("Expected version to be a semver, got %s", profile.Version)
+	}
 }
 
 func getClient(t *testing.T) *Client {
