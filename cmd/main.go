@@ -5,6 +5,7 @@ import (
 	"linkding-media-archiver/internal/job"
 	"linkding-media-archiver/internal/linkding"
 	"linkding-media-archiver/internal/logging"
+	"linkding-media-archiver/internal/semver"
 	"linkding-media-archiver/internal/ytdlp"
 	"log"
 	"log/slog"
@@ -29,7 +30,8 @@ func main() {
 	slog.SetDefault(logger)
 
 	client := createLinkdingClient()
-	checkHealth(client)
+	minVersion := semver.Semver{Major: 1, Minor: 44}
+	checkLinkdingVersion(client, minVersion)
 
 	tempdir := createTempDir()
 	cleanupAndExit := func(code int) {
@@ -84,11 +86,21 @@ func createLinkdingClient() *linkding.Client {
 	return client
 }
 
-func checkHealth(client *linkding.Client) {
-	_, err := client.GetUserProfile()
+func checkLinkdingVersion(client *linkding.Client, minVersion semver.Semver) {
+	profile, err := client.GetUserProfile()
 
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	version, err := semver.Parse(profile.Version)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if semver.Compare(version, minVersion) == -1 {
+		log.Fatalf("Please upgrade Linkding: found version %s, but this program requires at least version %s", version, minVersion)
 	}
 }
 
