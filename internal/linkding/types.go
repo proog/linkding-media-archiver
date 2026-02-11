@@ -6,9 +6,10 @@ import (
 )
 
 type Bookmark struct {
-	Id    int
-	Url   string
-	Title string
+	Id       int
+	Url      string
+	Title    string
+	TagNames []string `json:"tag_names"`
 }
 
 type Asset struct {
@@ -31,7 +32,7 @@ type Client struct {
 }
 
 type BookmarksQuery struct {
-	Tag           string
+	Tags          []string
 	BundleId      int
 	ModifiedSince time.Time
 }
