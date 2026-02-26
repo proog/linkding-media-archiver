@@ -30,7 +30,7 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 	failed := make(chan linkding.Bookmark, len(bookmarks))
 
 	for _, bookmark := range bookmarks {
-		paths, err := downloadMedia(client, ytdlp, bookmark)
+		results, err := downloadMedia(client, ytdlp, bookmark)
 
 		if err != nil {
 			failed <- bookmark
@@ -38,7 +38,7 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 		}
 
 		wg.Go(func() {
-			if err := uploadMedia(client, bookmark, paths, config.IsDryRun); err != nil {
+			if err := uploadMedia(client, bookmark, results, config.IsDryRun); err != nil {
 				failed <- bookmark
 				return
 			}
@@ -59,7 +59,7 @@ func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.
 	return client.GetBookmarks(query)
 }
 
-func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) ([]string, error) {
+func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) ([]ytdlp.DownloadResult, error) {
 	logger := slog.With("bookmarkId", bookmark.Id)
 	assets, err := client.GetBookmarkAssets(bookmark.Id)
 
@@ -78,27 +78,30 @@ func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkdin
 	}
 
 	logger.Info("Downloading media")
-	paths, err := ytdlp.DownloadMedia(bookmark.Url)
+	results, err := ytdlp.DownloadMedia(bookmark.Url)
 
 	if err != nil {
 		logger.Error("Failed to download media", "error", err)
 		return nil, err
 	}
 
-	logger.Info("Media downloaded successfully", "paths", paths)
-	return paths, nil
+	logger.Info("Media downloaded successfully", "results", results)
+	return results, nil
 }
 
-func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, paths []string, isDryRun bool) error {
+func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, results []ytdlp.DownloadResult, isDryRun bool) error {
 	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
 
-	for _, path := range paths {
-		logger.Info("Adding asset", "path", path)
+	for _, result := range results {
+		path := result.Path
+
+		logger := logger.With("path", path)
+		logger.Info("Adding asset")
 
 		file, err := os.Open(path)
 
 		if err != nil {
-			logger.Error("Failed to open media file", "path", path, "error", err)
+			logger.Error("Failed to open media file", "error", err)
 			return err
 		}
 
@@ -108,11 +111,11 @@ func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, paths []st
 		asset, err := uploadAsset(client, bookmark, file, isDryRun)
 
 		if err != nil {
-			logger.Error("Failed to add asset", "path", path, "error", err)
+			logger.Error("Failed to add asset", "error", err)
 			return err
 		}
 
-		logger.Info("Asset added successfully", "path", path, "assetId", asset.Id)
+		logger.Info("Asset added successfully", "assetId", asset.Id)
 	}
 
 	return nil
