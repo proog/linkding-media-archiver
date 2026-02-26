@@ -6,24 +6,24 @@ import (
 )
 
 type Bookmark struct {
-	Id       int
-	Url      string
-	Title    string
+	Id       int      `json:"id"`
+	Url      string   `json:"url"`
+	Title    string   `json:"title"`
 	TagNames []string `json:"tag_names"`
 }
 
 type Asset struct {
-	Id          int
+	Id          int    `json:"id"`
 	AssetType   string `json:"asset_type"`
 	ContentType string `json:"content_type"`
 	DisplayName string `json:"display_name"`
 }
 
 type PagedResponse[T any] struct {
-	Count    int
-	Next     *string
-	Previous *string
-	Results  []T
+	Count    int     `json:"count"`
+	Next     *string `json:"next"`
+	Previous *string `json:"previous"`
+	Results  []T     `json:"results"`
 }
 
 type Client struct {
@@ -38,5 +38,5 @@ type BookmarksQuery struct {
 }
 
 type UserProfile struct {
-	Version string
+	Version string `json:"version"`
 }
