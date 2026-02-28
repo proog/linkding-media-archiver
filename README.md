@@ -34,6 +34,9 @@ go build -o ./linkding-media-archiver ./cmd
 LDMA_BASEURL="http://localhost:9090" LDMA_TOKEN="abcd1234" ./linkding-media-archiver [-n] [-s]
 ```
 
+> [!NOTE]
+> The Docker image of Linkding Media Archiver uses the latest version of yt-dlp from the [Alpine community repository](https://pkgs.alpinelinux.org/package/edge/community/x86_64/yt-dlp) at build time. To keep up with new versions of yt-dlp, the `latest` tag (and its corresponding version tag) is updated nightly if a new yt-dlp version is available. To update, pull the image from Docker Hub.
+
 ### Flags
 
 - `-n` Dry run: download media but do not actually upload it to Linkding
