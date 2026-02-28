@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"linkding-media-archiver/internal/configuration"
 	"linkding-media-archiver/internal/job"
 	"linkding-media-archiver/internal/linkding"
 	"linkding-media-archiver/internal/logging"
@@ -11,8 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -26,10 +25,12 @@ func main() {
 	isSingleRun := flag.Bool("s", false, "Single run: exit after processing bookmarks once")
 	flag.Parse()
 
-	logger := logging.NewLogger()
+	config := configuration.ReadConfiguration()
+
+	logger := logging.NewLogger(config.LogLevel)
 	slog.SetDefault(logger)
 
-	client := createLinkdingClient()
+	client := createLinkdingClient(config)
 	minVersion := semver.Semver{Major: 1, Minor: 44}
 	checkLinkdingVersion(client, minVersion)
 
@@ -40,12 +41,8 @@ func main() {
 	}
 	onInterrupt(cleanupAndExit)
 
-	ytdlp := ytdlp.NewYtdlp(tempdir, os.Getenv("LDMA_FORMAT"))
-	tags := getLinkdingTags()
-	bundleId := getLinkdingBundleId()
-	interval := getScanInterval()
-	skipExisting := getSkipExistingBookmarks()
-	sleep := time.NewTicker(time.Duration(interval) * time.Second)
+	ytdlp := ytdlp.NewYtdlp(tempdir, config.YtdlpFormat)
+	sleep := time.NewTicker(config.ScanInterval)
 
 	var lastScan time.Time
 
@@ -53,14 +50,19 @@ func main() {
 	for ; true; <-sleep.C {
 		timeBeforeRun := time.Now()
 
-		if skipExisting && lastScan.IsZero() {
-			logger.Info("Waiting for initial scan", "scanInterval", interval)
+		if config.SkipExistingBookmarks && lastScan.IsZero() {
+			logger.Info("Waiting for initial scan", "scanInterval", config.ScanInterval)
 			lastScan = timeBeforeRun
 			continue
 		}
 
-		config := job.JobConfiguration{Tags: tags, BundleId: bundleId, IsDryRun: *isDryRun, LastScan: lastScan}
-		err := job.ProcessBookmarks(client, ytdlp, config)
+		jobConfig := job.JobConfiguration{
+			Tags:     config.Tags,
+			BundleId: config.BundleId,
+			IsDryRun: *isDryRun,
+			LastScan: lastScan,
+		}
+		err := job.ProcessBookmarks(client, ytdlp, jobConfig)
 
 		if err == nil {
 			lastScan = timeBeforeRun // Only update last scan time when bookmarks were actually processed
@@ -72,12 +74,12 @@ func main() {
 			cleanupAndExit(0)
 		}
 
-		logger.Info("Waiting for next scan", "scanInterval", interval)
+		logger.Info("Waiting for next scan", "scanInterval", config.ScanInterval)
 	}
 }
 
-func createLinkdingClient() *linkding.Client {
-	client, err := linkding.NewClient(os.Getenv("LDMA_BASEURL"), os.Getenv("LDMA_TOKEN"))
+func createLinkdingClient(config configuration.Configuration) *linkding.Client {
+	client, err := linkding.NewClient(config.LinkdingBaseUrl, config.LinkdingToken)
 
 	if err != nil {
 		log.Fatal(err)
@@ -112,36 +114,6 @@ func createTempDir() string {
 	}
 
 	return tempdir
-}
-
-func getLinkdingTags() []string {
-	tagsEnv := os.Getenv("LDMA_TAGS")
-	return strings.Fields(tagsEnv)
-}
-
-func getLinkdingBundleId() int {
-	bundleId, err := strconv.Atoi(os.Getenv("LDMA_BUNDLE_ID"))
-
-	if bundleId <= 0 || err != nil {
-		bundleId = 0
-	}
-
-	return bundleId
-}
-
-func getScanInterval() int {
-	interval, err := strconv.Atoi(os.Getenv("LDMA_SCAN_INTERVAL"))
-
-	if interval <= 0 || err != nil {
-		interval = 3600
-	}
-
-	return interval
-}
-
-func getSkipExistingBookmarks() bool {
-	skip, err := strconv.ParseBool(os.Getenv("LDMA_SKIP_EXISTING_BOOKMARKS"))
-	return err == nil && skip
 }
 
 func onInterrupt(cleanup func(int)) {

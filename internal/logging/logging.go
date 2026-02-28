@@ -6,16 +6,14 @@ import (
 	"strings"
 )
 
-func NewLogger() *slog.Logger {
-	options := slog.HandlerOptions{Level: getLogLevel()}
+func NewLogger(logLevel string) *slog.Logger {
+	options := slog.HandlerOptions{Level: getLogLevel(logLevel)}
 	handler := slog.NewJSONHandler(os.Stdout, &options)
 
 	return slog.New(handler)
 }
 
-func getLogLevel() slog.Level {
-	level := os.Getenv("LDMA_LOG_LEVEL")
-
+func getLogLevel(level string) slog.Level {
 	switch strings.ToUpper(level) {
 	case "DEBUG":
 		return slog.LevelDebug
