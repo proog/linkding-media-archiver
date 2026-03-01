@@ -208,7 +208,11 @@ func (client *Client) send(method string, url url.URL, headers map[string]string
 	logger.Debug("Received HTTP response")
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return resp, fmt.Errorf("expected success status code, was %s", resp.Status)
+		builder := new(strings.Builder)
+		io.Copy(builder, resp.Body)
+		body := builder.String()
+
+		return resp, fmt.Errorf("expected success status code, was %s with body: %s", resp.Status, body)
 	}
 
 	return resp, nil
