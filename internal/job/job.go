@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 )
 
@@ -51,6 +52,13 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 			if err := uploadMedia(client, bookmark, result.Paths, config.IsDryRun); err != nil {
 				failed <- bookmark
 				return
+			}
+
+			if config.UpdateBookmarkText {
+				if err := updateBookmark(client, bookmark, *result, config.IsDryRun); err != nil {
+					failed <- bookmark
+					return
+				}
 			}
 
 			succeeded <- bookmark
@@ -146,4 +154,34 @@ func uploadAsset(client *linkding.Client, bookmark linkding.Bookmark, file *os.F
 	}
 
 	return client.AddBookmarkAsset(bookmark.Id, file)
+}
+
+func updateBookmark(client *linkding.Client, bookmark linkding.Bookmark, result ytdlp.DownloadResult, isDryRun bool) error {
+	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
+	update := linkding.BookmarkUpdate{Title: bookmark.Title, Description: bookmark.Description}
+
+	if strings.TrimSpace(result.Title) != "" {
+		update.Title = result.Title
+	}
+	if strings.TrimSpace(result.Description) != "" {
+		update.Description = result.Description
+	}
+
+	hasChanges := update.Title != bookmark.Title || update.Description != bookmark.Description
+	if !hasChanges {
+		logger.Info("Skipping bookmark update as there are no changes")
+		return nil
+	}
+
+	logger.Info("Updating bookmark", "title", update.Title, "description", update.Description, "oldTitle", bookmark.Title, "oldDescription", bookmark.Description)
+
+	if !isDryRun {
+		if _, err := client.UpdateBookmark(bookmark.Id, update); err != nil {
+			logger.Error("Failed to update bookmark", "error", err)
+			return err
+		}
+	}
+
+	logger.Info("Updated bookmark")
+	return nil
 }

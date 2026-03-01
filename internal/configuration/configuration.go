@@ -16,6 +16,7 @@ func ReadConfiguration() Configuration {
 		ScanInterval:          getScanInterval(),
 		SkipExistingBookmarks: getSkipExistingBookmarks(),
 		Tags:                  getLinkdingTags(),
+		UpdateBookmarkText:    getUpdateBookmarkText(),
 		YtdlpFormat:           os.Getenv("LDMA_FORMAT"),
 	}
 }
@@ -43,6 +44,11 @@ func getScanInterval() time.Duration {
 	}
 
 	return time.Duration(interval) * time.Second
+}
+
+func getUpdateBookmarkText() bool {
+	update, err := strconv.ParseBool(os.Getenv("LDMA_UPDATE_BOOKMARK_TEXT"))
+	return err == nil && update
 }
 
 func getSkipExistingBookmarks() bool {
