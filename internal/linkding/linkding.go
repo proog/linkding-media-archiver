@@ -68,6 +68,29 @@ func (client *Client) GetBookmarks(query BookmarksQuery) ([]Bookmark, error) {
 	return results, err
 }
 
+func (client *Client) UpdateBookmark(bookmarkId int, update BookmarkUpdate) (*Bookmark, error) {
+	update.Title = truncateString(update.Title, 512)
+
+	logger := slog.With("bookmarkId", bookmarkId, "update", update)
+	logger.Debug("Updating bookmark")
+
+	endpointUrl := client.url("bookmarks", strconv.Itoa(bookmarkId), "/")
+	json, err := serialize(update)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.patchJson(endpointUrl, json)
+
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Debug("Updated bookmark")
+	return deserialize[Bookmark](response)
+}
+
 func (client *Client) GetBookmarkAssets(bookmarkId int) ([]Asset, error) {
 	logger := slog.With("bookmarkId", bookmarkId)
 	logger.Debug("Fetching assets for bookmark")
@@ -180,6 +203,11 @@ func (client *Client) url(path ...string) url.URL {
 
 func (client *Client) get(url url.URL) (*http.Response, error) {
 	return client.send(http.MethodGet, url, nil, nil, 0)
+}
+
+func (client *Client) patchJson(url url.URL, json io.Reader) (*http.Response, error) {
+	headers := map[string]string{"Content-Type": "application/json"}
+	return client.send(http.MethodPatch, url, headers, json, 0)
 }
 
 func (client *Client) send(method string, url url.URL, headers map[string]string, body io.Reader, contentLength int64) (*http.Response, error) {

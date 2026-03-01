@@ -57,10 +57,11 @@ func main() {
 		}
 
 		jobConfig := job.JobConfiguration{
-			Tags:     config.Tags,
-			BundleId: config.BundleId,
-			IsDryRun: *isDryRun,
-			LastScan: lastScan,
+			Tags:               config.Tags,
+			BundleId:           config.BundleId,
+			UpdateBookmarkText: config.UpdateBookmarkText,
+			IsDryRun:           *isDryRun,
+			LastScan:           lastScan,
 		}
 		err := job.ProcessBookmarks(client, ytdlp, jobConfig)
 

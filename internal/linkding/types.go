@@ -6,10 +6,11 @@ import (
 )
 
 type Bookmark struct {
-	Id       int      `json:"id"`
-	Url      string   `json:"url"`
-	Title    string   `json:"title"`
-	TagNames []string `json:"tag_names"`
+	Id          int      `json:"id"`
+	Url         string   `json:"url"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	TagNames    []string `json:"tag_names"`
 }
 
 type Asset struct {
@@ -35,6 +36,11 @@ type BookmarksQuery struct {
 	Tags          []string
 	BundleId      int
 	ModifiedSince time.Time
+}
+
+type BookmarkUpdate struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 type UserProfile struct {
