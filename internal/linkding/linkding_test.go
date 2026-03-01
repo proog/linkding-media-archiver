@@ -1,6 +1,7 @@
 package linkding
 
 import (
+	"crypto/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -130,6 +131,36 @@ func TestAddBookmarkAsset(t *testing.T) {
 
 	err = iotest.TestReader(download, expectedContent)
 	check(t, err)
+}
+
+func TestAddMultipleBookmarkAssets(t *testing.T) {
+	fileContent := make([]byte, 10_000_000)
+	_, err := rand.Read(fileContent)
+	check(t, err)
+
+	fileName := filepath.Join(t.TempDir(), "test-asset.mp4")
+	file, err := os.Create(fileName)
+	check(t, err)
+
+	file.Write(fileContent)
+	file.Sync()
+	file.Close()
+
+	client := getClient(t)
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tags: []string{validTag}})
+	check(t, err)
+
+	bookmark := bookmarks[0]
+
+	for range 5 {
+		file, err := os.Open(fileName)
+		check(t, err)
+
+		_, err = client.AddBookmarkAsset(bookmark.Id, file)
+		check(t, err)
+
+		file.Close()
+	}
 }
 
 func TestGetUserProfile(t *testing.T) {

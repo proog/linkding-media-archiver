@@ -193,6 +193,7 @@ func (client *Client) send(method string, url url.URL, headers map[string]string
 		req.Header.Add(key, value)
 	}
 
+	req.Close = true // Avoid reusing TCP connections while they're closing
 	req.Header.Set("Authorization", fmt.Sprint("Token ", client.Token))
 
 	logger := slog.With("method", method, "url", url.String())
