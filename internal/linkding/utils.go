@@ -66,9 +66,10 @@ func createMultipartPart(formData *multipart.Writer, fieldName, fileName, mimeTy
 	return formData.CreatePart(header)
 }
 
-func emptyMultipartPartLength(fieldName, fileName, mimeType string) int64 {
+func emptyMultipartPartLength(fieldName, fileName, mimeType, boundary string) int64 {
 	body := &bytes.Buffer{}
 	formData := multipart.NewWriter(body)
+	formData.SetBoundary(boundary)
 
 	createMultipartPart(formData, fieldName, fileName, mimeType)
 	formData.Close()

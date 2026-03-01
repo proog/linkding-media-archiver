@@ -141,7 +141,7 @@ func (client *Client) AddBookmarkAsset(bookmarkId int, file *os.File) (*Asset, e
 
 	url := client.url("bookmarks", strconv.Itoa(bookmarkId), "assets/upload/")
 	headers := map[string]string{"Content-Type": formData.FormDataContentType()}
-	contentLength := emptyMultipartPartLength(fieldName, fileName, mimeType) + fileSize
+	contentLength := emptyMultipartPartLength(fieldName, fileName, mimeType, formData.Boundary()) + fileSize
 
 	resp, err := client.send(http.MethodPost, url, headers, readBody, contentLength)
 
