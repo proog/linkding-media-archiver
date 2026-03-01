@@ -9,19 +9,18 @@ import (
 )
 
 func TestDownloadMedia(t *testing.T) {
-	ytdlp := Ytdlp{DownloadDir: t.TempDir()}
-	results, err := ytdlp.DownloadMedia("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
+	ytdlp := NewYtdlp(t.TempDir(), "")
+	result, err := ytdlp.DownloadMedia("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected single result, was %d", len(results))
+	if len(result.Paths) != 1 {
+		t.Fatalf("Expected single file, was %d", len(result.Paths))
 	}
 
-	result := results[0]
-	stat, err := os.Stat(result.Path)
+	stat, err := os.Stat(result.Paths[0])
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,36 +33,35 @@ func TestDownloadMedia(t *testing.T) {
 		t.Errorf("Unexpected filename: %s", actualName)
 	}
 
-	if result.Metadata.Title != "Tokyo Station (JY-01) - Yamanote Train Melody" {
-		t.Errorf("Unexpected title: %s", result.Metadata.Title)
+	if result.Title != "Tokyo Station (JY-01) - Yamanote Train Melody" {
+		t.Errorf("Unexpected title: %s", result.Title)
 	}
 
-	if !strings.HasPrefix(result.Metadata.Description, "The Tokyo station train melody for the JR Yamanote Line.") {
-		t.Errorf("Unexpected description: %s", result.Metadata.Description)
+	if !strings.HasPrefix(result.Description, "The Tokyo station train melody for the JR Yamanote Line.") {
+		t.Errorf("Unexpected description: %s", result.Description)
 	}
 
 	expectedTags := []string{"tokyo station melody", "yamanote line jingle", "駅のメロディー"}
 	for _, tag := range expectedTags {
-		if !slices.Contains(result.Metadata.Tags, tag) {
-			t.Errorf("Expected tag %s was not found in %s", tag, strings.Join(result.Metadata.Tags, ","))
+		if !slices.Contains(result.Tags, tag) {
+			t.Errorf("Expected tag %s was not found in %s", tag, strings.Join(result.Tags, ","))
 		}
 	}
 }
 
 func TestDownloadMediaWithFormatSelection(t *testing.T) {
-	ytdlp := Ytdlp{DownloadDir: t.TempDir(), Format: "bestaudio[ext=m4a]"}
-	results, err := ytdlp.DownloadMedia("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
+	ytdlp := NewYtdlp(t.TempDir(), "bestaudio[ext=m4a]")
+	result, err := ytdlp.DownloadMedia("https://www.youtube.com/watch?v=RWGTIIO2QiQ")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected single result, was %d", len(results))
+	if len(result.Paths) != 1 {
+		t.Fatalf("Expected single file, was %d", len(result.Paths))
 	}
 
-	result := results[0]
-	stat, err := os.Stat(result.Path)
+	stat, err := os.Stat(result.Paths[0])
 
 	if err != nil {
 		t.Fatal(err)
@@ -78,19 +76,27 @@ func TestDownloadMediaWithFormatSelection(t *testing.T) {
 }
 
 func TestDownloadMediaWithMultipleFiles(t *testing.T) {
-	ytdlp := Ytdlp{DownloadDir: t.TempDir()}
-	results, err := ytdlp.DownloadMedia("https://pontus.granstrom.me/scrappy/")
+	ytdlp := NewYtdlp(t.TempDir(), "")
+	result, err := ytdlp.DownloadMedia("https://www.youtube.com/playlist?list=PLSBoMdEkRnhQCyNGzVR66TgY93bJcTfsc")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(results) < 2 {
-		t.Errorf("Expected multiple results, was %d", len(results))
+	if len(result.Paths) < 2 {
+		t.Errorf("Expected multiple files, was %d", len(result.Paths))
 	}
 
-	for _, result := range results {
-		if _, err := os.Stat(result.Path); err != nil {
+	if result.Title != "Weslace and Zromitman" {
+		t.Errorf("Unexpected title: %s", result.Title)
+	}
+
+	if !strings.HasPrefix(result.Description, "The most pleasant of pleasant days begin with a nice hearty breakfast to put that spring in your step.") {
+		t.Errorf("Unexpected description: %s", result.Description)
+	}
+
+	for _, path := range result.Paths {
+		if _, err := os.Stat(path); err != nil {
 			t.Error(err)
 		}
 	}

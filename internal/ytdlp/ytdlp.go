@@ -2,18 +2,17 @@ package ytdlp
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 func NewYtdlp(downloadDir string, format string) *Ytdlp {
 	return &Ytdlp{DownloadDir: downloadDir, Format: format}
 }
 
-func (ytdlp *Ytdlp) DownloadMedia(url string) ([]DownloadResult, error) {
+func (ytdlp *Ytdlp) DownloadMedia(url string) (*DownloadResult, error) {
 	logger := slog.With("url", url)
 
 	tempdir, err := os.MkdirTemp(ytdlp.DownloadDir, "media")
@@ -40,30 +39,28 @@ func (ytdlp *Ytdlp) DownloadMedia(url string) ([]DownloadResult, error) {
 		return nil, err
 	}
 
-	results := make([]DownloadResult, 0, 10)
-	for line := range strings.Lines(string(output)) {
-		mediaPath := strings.TrimSpace(line)
-		result, err := createDownloadResult(mediaPath)
+	var jsonDump jsonDump
+	err = json.Unmarshal(output, &jsonDump)
 
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, *result)
+	if err != nil {
+		return nil, err
 	}
 
-	logger.Debug("Downloaded media", "results", results)
+	result := newDownloadResult(&jsonDump)
+	logger.Debug("Downloaded media", "result", result)
 
-	return results, nil
+	if len(result.Paths) == 0 {
+		return nil, fmt.Errorf("no paths in download result: %+v", result)
+	}
+
+	return &result, nil
 }
 
 func (ytdlp *Ytdlp) cmd(url string) *exec.Cmd {
 	args := []string{
 		"--no-simulate",
 		"--restrict-filenames",
-		"--write-info-json",
-		"--print",
-		"after_move:filepath", // https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#outtmpl-postprocess-note
+		"--dump-single-json",
 	}
 
 	// https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection
@@ -77,24 +74,23 @@ func (ytdlp *Ytdlp) cmd(url string) *exec.Cmd {
 	return cmd
 }
 
-func createDownloadResult(mediaPath string) (*DownloadResult, error) {
-	logger := slog.With("mediaPath", mediaPath)
-	logger.Debug("Creating download result")
+func newDownloadResult(jsonDump *jsonDump) DownloadResult {
+	paths := make([]string, 0, len(jsonDump.RequestedDownloads)+len(jsonDump.Entries))
 
-	infoJsonPath := strings.TrimSuffix(mediaPath, filepath.Ext(mediaPath)) + ".info.json"
-	infoJson, err := os.ReadFile(infoJsonPath)
-
-	if err != nil {
-		return nil, err
+	for _, download := range jsonDump.RequestedDownloads {
+		paths = append(paths, download.FilePath)
 	}
 
-	var metadata Metadata
-	if err := json.Unmarshal(infoJson, &metadata); err != nil {
-		return nil, err
+	for _, entry := range jsonDump.Entries {
+		for _, download := range entry.RequestedDownloads {
+			paths = append(paths, download.FilePath)
+		}
 	}
 
-	result := DownloadResult{Path: mediaPath, Metadata: metadata}
-	logger.Debug("Created download result")
-
-	return &result, nil
+	return DownloadResult{
+		Title:       jsonDump.Title,
+		Description: jsonDump.Description,
+		Tags:        jsonDump.Tags,
+		Paths:       paths,
+	}
 }
