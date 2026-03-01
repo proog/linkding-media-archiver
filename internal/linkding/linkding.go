@@ -16,7 +16,11 @@ import (
 
 func NewClient(baseUrl string, token string) (*Client, error) {
 	if baseUrl == "" {
-		return nil, fmt.Errorf("base URL is required")
+		return nil, fmt.Errorf("Linkding base URL is required")
+	}
+
+	if token == "" {
+		return nil, fmt.Errorf("Linkding token is required")
 	}
 
 	parsedUrl, err := url.Parse(baseUrl)

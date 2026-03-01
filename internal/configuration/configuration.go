@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -10,25 +9,15 @@ import (
 
 func ReadConfiguration() Configuration {
 	return Configuration{
-		LinkdingBaseUrl:       requireEnv("LDMA_BASEURL"),
-		LinkdingToken:         requireEnv("LDMA_TOKEN"),
+		LinkdingBaseUrl:       os.Getenv("LDMA_BASEURL"),
+		LinkdingToken:         os.Getenv("LDMA_TOKEN"),
 		BundleId:              getLinkdingBundleId(),
-		LogLevel:              getLogLevel(),
+		LogLevel:              os.Getenv("LDMA_LOG_LEVEL"),
 		ScanInterval:          getScanInterval(),
 		SkipExistingBookmarks: getSkipExistingBookmarks(),
 		Tags:                  getLinkdingTags(),
-		YtdlpFormat:           getYtdlpFormat(),
+		YtdlpFormat:           os.Getenv("LDMA_FORMAT"),
 	}
-}
-
-func requireEnv(name string) string {
-	value := os.Getenv(name)
-
-	if value == "" {
-		log.Fatalf("Environment variable %s is required", name)
-	}
-
-	return value
 }
 
 func getLinkdingTags() []string {
@@ -59,12 +48,4 @@ func getScanInterval() time.Duration {
 func getSkipExistingBookmarks() bool {
 	skip, err := strconv.ParseBool(os.Getenv("LDMA_SKIP_EXISTING_BOOKMARKS"))
 	return err == nil && skip
-}
-
-func getYtdlpFormat() string {
-	return os.Getenv("LDMA_FORMAT")
-}
-
-func getLogLevel() string {
-	return os.Getenv("LDMA_LOG_LEVEL")
 }
