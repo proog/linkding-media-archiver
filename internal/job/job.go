@@ -37,17 +37,14 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 			continue
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if err := uploadMedia(client, bookmark, paths, config.IsDryRun); err != nil {
 				failed <- bookmark
 				return
 			}
 
 			succeeded <- bookmark
-		}()
+		})
 	}
 
 	wg.Wait()
