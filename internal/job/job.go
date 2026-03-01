@@ -30,15 +30,25 @@ func ProcessBookmarks(client *linkding.Client, ytdlp *ytdlp.Ytdlp, config JobCon
 	failed := make(chan linkding.Bookmark, len(bookmarks))
 
 	for _, bookmark := range bookmarks {
-		results, err := downloadMedia(client, ytdlp, bookmark)
+		hasAsset, err := hasMediaAsset(client, bookmark)
+		if err != nil {
+			failed <- bookmark
+			continue
+		}
 
+		if hasAsset {
+			succeeded <- bookmark
+			continue
+		}
+
+		result, err := downloadMedia(ytdlp, bookmark)
 		if err != nil {
 			failed <- bookmark
 			continue
 		}
 
 		wg.Go(func() {
-			if err := uploadMedia(client, bookmark, results, config.IsDryRun); err != nil {
+			if err := uploadMedia(client, bookmark, result.Paths, config.IsDryRun); err != nil {
 				failed <- bookmark
 				return
 			}
@@ -59,13 +69,13 @@ func getBookmarks(client *linkding.Client, config JobConfiguration) ([]linkding.
 	return client.GetBookmarks(query)
 }
 
-func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) ([]ytdlp.DownloadResult, error) {
+func hasMediaAsset(client *linkding.Client, bookmark linkding.Bookmark) (bool, error) {
 	logger := slog.With("bookmarkId", bookmark.Id)
 	assets, err := client.GetBookmarkAssets(bookmark.Id)
 
 	if err != nil {
 		logger.Error("Failed to fetch bookmark assets")
-		return nil, err
+		return false, err
 	}
 
 	mediaAssetIndex := slices.IndexFunc(assets, func(asset linkding.Asset) bool {
@@ -74,27 +84,30 @@ func downloadMedia(client *linkding.Client, ytdlp *ytdlp.Ytdlp, bookmark linkdin
 
 	if mediaAssetIndex > -1 {
 		logger.Info("Media asset already exists", "assetId", assets[mediaAssetIndex].Id)
-		return nil, nil
+		return true, nil
 	}
 
+	return false, nil
+}
+
+func downloadMedia(ytdlp *ytdlp.Ytdlp, bookmark linkding.Bookmark) (*ytdlp.DownloadResult, error) {
+	logger := slog.With("bookmarkId", bookmark.Id)
 	logger.Info("Downloading media")
-	results, err := ytdlp.DownloadMedia(bookmark.Url)
+	result, err := ytdlp.DownloadMedia(bookmark.Url)
 
 	if err != nil {
 		logger.Error("Failed to download media", "error", err)
 		return nil, err
 	}
 
-	logger.Info("Media downloaded successfully", "results", results)
-	return results, nil
+	logger.Info("Media downloaded successfully", "result", result)
+	return result, nil
 }
 
-func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, results []ytdlp.DownloadResult, isDryRun bool) error {
+func uploadMedia(client *linkding.Client, bookmark linkding.Bookmark, paths []string, isDryRun bool) error {
 	logger := slog.With("bookmarkId", bookmark.Id, "isDryRun", isDryRun)
 
-	for _, result := range results {
-		path := result.Path
-
+	for _, path := range paths {
 		logger := logger.With("path", path)
 		logger.Info("Adding asset")
 
