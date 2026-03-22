@@ -2,6 +2,7 @@ package linkding
 
 import (
 	"crypto/rand"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -77,6 +78,30 @@ func TestGetBookmarksModifiedSince(t *testing.T) {
 				t.Fatal("No bookmarks found")
 			}
 		})
+	}
+}
+
+func TestUpdateBookmark(t *testing.T) {
+	client := getClient(t)
+
+	bookmarks, err := client.GetBookmarks(BookmarksQuery{Tags: []string{validTag}})
+	check(t, err)
+
+	update := BookmarkUpdate{
+		Title:       fmt.Sprintf("Updated bookmark title %d (%s)", time.Now().Unix(), strings.Repeat("12345678", 64)),
+		Description: fmt.Sprintf("Updated bookmark description %d", time.Now().Unix()),
+	}
+
+	bookmark, err := client.UpdateBookmark(bookmarks[0].Id, update)
+	check(t, err)
+
+	expectedTitle := string([]rune(update.Title)[:509]) + "..."
+	if bookmark.Title != expectedTitle {
+		t.Errorf("Expected title to be %s, was %s", expectedTitle, bookmark.Title)
+	}
+
+	if bookmark.Description != update.Description {
+		t.Errorf("Expected description to be %s, was %s", update.Description, bookmark.Description)
 	}
 }
 

@@ -11,6 +11,16 @@ import (
 	"net/url"
 )
 
+func serialize(value any) (io.Reader, error) {
+	json, err := json.Marshal(value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(json), nil
+}
+
 func deserialize[T any](resp *http.Response) (*T, error) {
 	var result T
 
@@ -75,4 +85,15 @@ func emptyMultipartPartLength(fieldName, fileName, mimeType, boundary string) in
 	formData.Close()
 
 	return int64(body.Len())
+}
+
+func truncateString(s string, maxLength int) string {
+	runes := []rune(s)
+
+	if len(runes) <= maxLength {
+		return s
+	}
+
+	const ellipsis = "..."
+	return string(runes[:maxLength-len(ellipsis)]) + ellipsis
 }

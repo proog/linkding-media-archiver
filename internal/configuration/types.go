@@ -10,5 +10,6 @@ type Configuration struct {
 	ScanInterval          time.Duration
 	SkipExistingBookmarks bool
 	Tags                  []string
+	UpdateBookmarkText    bool
 	YtdlpFormat           string
 }
