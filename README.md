@@ -44,6 +44,8 @@ LDMA_BASEURL="http://localhost:9090" LDMA_TOKEN="abcd1234" ./linkding-media-arch
 
 ### Environment variables
 
+All variables below support a `_FILE` suffix to read their value from a file, for example `LDMA_TOKEN_FILE=/run/secrets/linkding_token`.
+
 | Name                           | Example                            | Default                | Description                                                                                                                                         |
 | ------------------------------ | ---------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LDMA_BASEURL`                 | `http://linkding.example.com:9090` | None **(required)**    | Base URL of your Linkding instance                                                                                                                  |
