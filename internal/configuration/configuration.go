@@ -9,25 +9,25 @@ import (
 
 func ReadConfiguration() Configuration {
 	return Configuration{
-		LinkdingBaseUrl:       os.Getenv("LDMA_BASEURL"),
-		LinkdingToken:         os.Getenv("LDMA_TOKEN"),
+		LinkdingBaseUrl:       getEnvOrFile("LDMA_BASEURL"),
+		LinkdingToken:         getEnvOrFile("LDMA_TOKEN"),
 		BundleId:              getLinkdingBundleId(),
-		LogLevel:              os.Getenv("LDMA_LOG_LEVEL"),
+		LogLevel:              getEnvOrFile("LDMA_LOG_LEVEL"),
 		ScanInterval:          getScanInterval(),
 		SkipExistingBookmarks: getSkipExistingBookmarks(),
 		Tags:                  getLinkdingTags(),
 		UpdateBookmarkText:    getUpdateBookmarkText(),
-		YtdlpFormat:           os.Getenv("LDMA_FORMAT"),
+		YtdlpFormat:           getEnvOrFile("LDMA_FORMAT"),
 	}
 }
 
 func getLinkdingTags() []string {
-	tagsEnv := os.Getenv("LDMA_TAGS")
+	tagsEnv := getEnvOrFile("LDMA_TAGS")
 	return strings.Fields(tagsEnv)
 }
 
 func getLinkdingBundleId() int {
-	bundleId, err := strconv.Atoi(os.Getenv("LDMA_BUNDLE_ID"))
+	bundleId, err := strconv.Atoi(getEnvOrFile("LDMA_BUNDLE_ID"))
 
 	if bundleId <= 0 || err != nil {
 		bundleId = 0
@@ -37,7 +37,7 @@ func getLinkdingBundleId() int {
 }
 
 func getScanInterval() time.Duration {
-	interval, err := strconv.Atoi(os.Getenv("LDMA_SCAN_INTERVAL"))
+	interval, err := strconv.Atoi(getEnvOrFile("LDMA_SCAN_INTERVAL"))
 
 	if interval <= 0 || err != nil {
 		interval = 3600
@@ -47,11 +47,22 @@ func getScanInterval() time.Duration {
 }
 
 func getUpdateBookmarkText() bool {
-	update, err := strconv.ParseBool(os.Getenv("LDMA_UPDATE_BOOKMARK_TEXT"))
+	update, err := strconv.ParseBool(getEnvOrFile("LDMA_UPDATE_BOOKMARK_TEXT"))
 	return err == nil && update
 }
 
 func getSkipExistingBookmarks() bool {
-	skip, err := strconv.ParseBool(os.Getenv("LDMA_SKIP_EXISTING_BOOKMARKS"))
+	skip, err := strconv.ParseBool(getEnvOrFile("LDMA_SKIP_EXISTING_BOOKMARKS"))
 	return err == nil && skip
+}
+
+func getEnvOrFile(key string) string {
+	if filePath := os.Getenv(key + "_FILE"); filePath != "" {
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(content))
+	}
+	return os.Getenv(key)
 }
